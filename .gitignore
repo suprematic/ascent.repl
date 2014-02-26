@@ -1,0 +1,5 @@
+.DS_Store
+demo/**
+extension/js/compiled/**
+target/**
+/extension.zip
