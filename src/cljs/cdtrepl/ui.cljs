@@ -1,6 +1,8 @@
 (ns cdtrepl.ui
   (:require 
-      [reagent.core :as reagent :refer [atom]]))
+      [reagent.core :as reagent :refer [atom]]
+      [cdtrepl.ui-settings :as settings]
+      [khroma.runtime :as kruntime]))
 
 
 
@@ -44,6 +46,20 @@
        }  
 
        (str "<ns: " @ns ">")
+    ]
+    
+    [:div
+      {
+        :style {
+          :float "right"
+          :color "grey"
+          :padding-top "4px"
+          :margin-right "5px"        
+        }
+      }    
+     
+      (str "v. " (if kruntime/available? 
+        (@kruntime/manifest "version") "x.x"))
     ]
   ]
 )
@@ -224,21 +240,23 @@
 (defn root-div [model]
   (fn []
     [:div
-      [toolbar-div (assoc (:toolbar model) :ns (:ns model))]
+      [:div
+        [toolbar-div (assoc (:toolbar model) :ns (:ns model))]
 
-      [:div 
-        {
-          :style {
-            :overflow-y "scroll"
-            :width "100%"
-            :position "absolute"
-            :top "35px"
-            :bottom "0px"
+        [:div 
+          {
+            :style {
+              :overflow-y "scroll"
+              :width "100%"
+              :position "absolute"
+              :top "35px"
+              :bottom "0px"
+            }
           }
-        }
 
-        [log-div   (:log model)] 
-        [input-div (:input model)] 
+          [log-div   (:log model)] 
+          [input-div (:input model)] 
+        ]
       ]
     ]
   )
