@@ -7,7 +7,7 @@
       [khroma.devtools :as devtools]
       [cljs.core.async :as async]
       [khroma.log :as log])
-
+ 
   (:require-macros 
     [cljs.core.async.macros :refer [go alt! go-loop]]))
 
@@ -31,19 +31,6 @@
 
 
 (declare page-model)
-
-(defn immigrate-expression [from-ns to-ns]
-  (str "(function () { for(prop in " from-ns ") " to-ns "[prop] = " from-ns  "[prop]; })();"))
-
-(defn immigrate! [from-ns to-ns]
-  (eval/eval!
-    (immigrate-expression from-ns to-ns)))
-
-(defn create-ns! [ns-name immigrate?]
-  (eval/eval!
-    (str "goog.provide('" ns-name "'); goog.require('cljs.core'); " (if immigrate? (immigrate-expression "cljs.core" ns-name)))
-    :ignore-exception? true))
-
 
 (defn last-index [history]
   (let [size (count history)]
@@ -93,7 +80,7 @@
 
 
               (when (:ns-change result)
-                (immigrate! "cljs.core" (:response-ns result)) 
+                (eval/immigrate! "cljs.core" (:response-ns result)) 
                 (reset! (:ns page-model) (:response-ns result))) 
 
               (recur (<! chan)))
@@ -118,26 +105,36 @@
 
 
       :on-execute   #(let [statement-atom (-> page-model :input :statement)
-                 statement (clojure.string/trim @statement-atom)]
+                           statement (clojure.string/trim @statement-atom)]
 
-                (when-not (empty? statement)
-                  (append-history (:input page-model) statement)
-                  (go
-                    (log/debug "in-channel < " statement)
+                      (when-not (empty? statement)
+                        (append-history (:input page-model) statement)
+                          (go
+                            (log/debug "in-channel < " statement)
 
-                    (>! 
-                      (:in-channel page-model) {:clj-statement statement :ns @(:ns page-model)}))))
+                             (when-not (<! (eval/has-cljs-core?))
+                                (<! (eval/inject-cljs-core)))
+                             
+                             (<! (eval/create-ns! @(:ns page-model) true))
+                            
+                            (>! 
+                              (:in-channel page-model) {:clj-statement statement :ns @(:ns page-model)}))))
 
 
 
       :on-history-backward #(history-step (:input page-model) compute-idx-backward)
       :on-history-forward #(history-step (:input page-model) compute-idx-forward)
     }
+    
+    
+    :settings {
+      :visible (atom false)
+    }
+    
 
     :ns (atom "cljs.user")
   } 
 ) 
-
 
 (defn exception-supressor [in-ch]
   (async/map< 
@@ -155,8 +152,6 @@
 (defn ^:export run []
   (setup-routing 
     (:in-channel page-model) (:out-channel page-model) (:out-channel page-model))
-
-    (create-ns! @(:ns page-model) true)
-
+      
     (reagent/render-component [(ui/root-div page-model)]
       (.-body js/document)))

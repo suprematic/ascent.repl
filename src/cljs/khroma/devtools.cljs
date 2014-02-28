@@ -33,15 +33,17 @@
     (.eval js/chrome.devtools.inspectedWindow statement  
       (fn [result exception]
         (go
-          (log/debug result " / " exception)
-
-          (let [result (js->clj 
-                  (if ignore-exception?
-                    result
-                    (or result exception)))]
-
-            (>! channel 
-              (kutil/escape-nil result)))
+            (let [result (js->clj result) exception (js->clj exception)]        
+              (log/debug result " / " exception " ignore-exception: " ignore-exception?)
+              
+              (let [result 
+                      (if ignore-exception?
+                        result
+                        (or exception result))]
+                (>! channel 
+                  (kutil/escape-nil result)))
+            )
+          
 
           (async/close! channel)))) 
     channel))

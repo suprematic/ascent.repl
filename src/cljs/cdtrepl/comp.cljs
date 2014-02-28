@@ -22,30 +22,35 @@
     {  :status  "error"
        :message (response-text request) }))
 
+
+(defn compile [request]
+  (let [result (async/chan) http-request (js/XMLHttpRequest.)]
+    (.open http-request "POST" "http://cdtrepl.suprematic.net/compile" false)
+    (.setRequestHeader http-request "Content-Type" "application/json")
+      
+    (set! (.-onload http-request) 
+      (fn []
+        (go 
+          (>! result (merge request (make-response  http-request)))))) 
+    
+    (try
+      (.send  http-request 
+      (.stringify js/JSON 
+        (clj->js request)))
+
+      (catch  js/Object e
+        (go 
+          (>! result 
+            { :status "error" :message (str e) }))))
+    
+    result))
+
 (defn compiler [in-ch]
   (let [out-ch (async/chan)]
-    (go-loop []
-      (let [request (<! in-ch) http-request (js/XMLHttpRequest.)]
-        (log/debug "compiler < " request)
-
-        (.open http-request "POST" "http://cdtrepl.suprematic.net/compile" false)
-        (.setRequestHeader http-request "Content-Type" "application/json")
-
-        (set! (.-onload http-request) 
-          (fn []
-              (go 
-              (>! out-ch (merge request (make-response  http-request))))))
-
-        (try
-          (.send  http-request 
-          (.stringify js/JSON (clj->js request)))
-
-          (catch  js/Object e
-              (>! out-ch 
-              { :status "error"
-                :message (str e) }))))
-
-      (recur))
+    (go-loop [request (<! in-ch)]
+      (log/debug "compiler < " request)
+      (>! out-ch (<! (compile request)))  
+      (recur (<! in-ch)))
 
     out-ch))
 
