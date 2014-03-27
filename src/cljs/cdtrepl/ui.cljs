@@ -67,13 +67,15 @@
 (defn prompt-div [{:keys [image]}]
   [:div
     {
+      :class "prompt-div"
       :style 
         (merge 
           {
-            :height "100%"
+            :height "20px"
             :width "20px"
             :padding-top "0px"
             :float "left"
+            :clear "both"; 
           }
 
           (if image
@@ -92,6 +94,7 @@
   [:div
     {
       :id "input"
+      :class "input-div"
       :style {
         :padding "0px"
         :padding-top "3px"
@@ -143,8 +146,11 @@
 (defn log-sub-line [{:keys [color text image]}]
   [:div
     {
+      :class "log-sub-line"
+     
       :style {
-        :height "16px"
+        :clear "both"
+        :min-height "20px"
       }
     }
     
@@ -156,6 +162,8 @@
     [:div 
       {
         :style {
+          :padding-top "4px"
+          :margin-left "20px"
           :color color
         }
       }
@@ -186,8 +194,6 @@
       :style {
         :border-bottom "1px solid #EEE"
         :width "100%"
-        :padding-top "3px"
-        :padding-bottom "2px"
       }
     }
 
@@ -198,6 +204,7 @@
         :image "img/prompt_log.png" 
       }
     ]
+    
 
     (if-not (compile-ok? entry)
       [log-sub-line 
@@ -209,7 +216,7 @@
       }
       ]
     )
-
+ 
     (if (compile-ok? entry)
       (if (eval-ok? entry)
         [log-sub-line 
@@ -226,6 +233,7 @@
         }]
       )
     )
+    
   ]
 )
 
