@@ -84,7 +84,7 @@
 
 (defn create-ns! [ns-name immigrate?]
   (eval!
-    (str "goog.provide('" ns-name "'); goog.require('cljs.core'); " (if immigrate? (immigrate-expression "cljs.core" ns-name)))
+    (str " try { goog.provide('" ns-name "'); } catch(x) {};  goog.require('cljs.core'); " (if immigrate? (immigrate-expression "cljs.core" ns-name)))
     :ignore-exception? true))
 
 
