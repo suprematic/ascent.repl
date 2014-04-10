@@ -1,10 +1,14 @@
 (ns cdtrepl.core
   (:require 
+     
       [reagent.core :as reagent :refer [atom]]
       [cdtrepl.ui :as ui]
       [cdtrepl.eval :as eval]
+      [cdtrepl.background :as background]
       [cdtrepl.comp :as comp]
       [khroma.devtools :as devtools]
+      [khroma.extension :as extension]
+      [khroma.runtime :as runtime]
       [cljs.core.async :as async]
       [khroma.log :as log])
  
@@ -73,20 +77,15 @@
 (def page-model 
   {
     :in-channel   (async/chan)
-    :out-channel  (let [chan (async/chan)]
-            (go-loop [result (<! chan)]
-              (append-keyed-entry! (-> page-model :log :entries) result)
-              (reset! (-> page-model :input :statement) "")
-
-
-              (when (:ns-change result)
-                (eval/immigrate! "cljs.core" (:response-ns result)) 
-                (reset! (:ns page-model) (:response-ns result))) 
-
-              (recur (<! chan)))
-
-            chan)
-
+ 
+    :out-channel  (async/map>
+                    (fn [result]
+                      (append-keyed-entry! (-> page-model :log :entries) result)
+                      (reset! (-> page-model :input :statement) "")) 
+                    (async/chan 
+                      (async/dropping-buffer 1)))
+    
+    
     :toolbar {
       :on-reset #(reset! (-> page-model :log :entries) 
              (empty-keyed-list))
@@ -107,18 +106,13 @@
       :on-execute   #(let [statement-atom (-> page-model :input :statement)
                            statement (clojure.string/trim @statement-atom)]
 
-                      (when-not (empty? statement)
-                        (append-history (:input page-model) statement)
-                          (go
-                            (log/debug "in-channel < " statement)
+                            (when-not (empty? statement)
+                              (append-history (:input page-model) statement)
+                              (go
+                                (log/debug "in-channel < " statement)
 
-                             (when-not (<! (eval/has-cljs-core?))
-                                (<! (eval/inject-cljs-core)))
-                             
-                             (<! (eval/create-ns! @(:ns page-model) true))
-                            
-                            (>! 
-                              (:in-channel page-model) {:clj-statement statement :ns @(:ns page-model)}))))
+                                (>! 
+                                  (:in-channel page-model) {:clj-statement statement :ns @(get-in page-model [:tab :ns])}))))
 
 
 
@@ -126,30 +120,48 @@
       :on-history-forward #(history-step (:input page-model) compute-idx-forward)
     }
     
-    
     :settings {
       :visible (atom false)
     }
     
-
-    :ns (atom "cljs.user")
+    :tab {
+      :ns         (atom "cljs.user")
+      :info       (atom nil)
+      :on-inject #(background/inject-cljs)
+    }
   } 
 ) 
 
-(defn exception-supressor [in-ch]
-  (async/map< 
-    (fn [request]
-      (assoc request :ignore-exception? (:ns-change request))) in-ch))
+(defn ns-handler [in out]
+  (let [[in pass] (async/split #(:ns-change %) in)]
+    (async/pipe 
+      (async/map< 
+        (fn [{:keys [response-ns] :as request}]
+          (reset! (get-in page-model [:tab :ns]) response-ns)
+          (background/create-ns response-ns)
+          (assoc request :eval-status "ok" :eval-result response-ns)     
+        ) in) out) pass))
 
 (defn setup-routing [in out err]
   (-> in
       (comp/compiler)
       (comp/divert-errors err)
-      (exception-supressor)
+      (ns-handler out)
       (eval/evaluator)  
       (async/pipe out)))
 
+(background/handler "tab-info"
+  (fn [message] 
+      (when (:is_cljs message)
+        (background/create-ns @(get-in page-model [:tab :ns])))
+      
+      (reset! 
+        (get-in page-model [:tab :info]) (dissoc message :type))))
+
 (defn ^:export run []
+  (when (and devtools/available? runtime/available?)
+    (background/connect-and-listen @devtools/tab-id))
+      
   (setup-routing 
     (:in-channel page-model) (:out-channel page-model) (:out-channel page-model))
       
