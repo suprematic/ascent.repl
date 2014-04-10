@@ -8,7 +8,7 @@ var setPort = function(destination, tabId, port) {
   if(!forDestination) 
     forDestination = connections[destination] = {};
 
-  port.tabId = tabId.toString();
+  port.tabId = tabId;
 
   forDestination[tabId] = port;
 }
@@ -105,7 +105,8 @@ chrome.runtime.onConnect.addListener(function(connection) {
         console.debug("incoming connection from tab:%s", connection.sender.tab.id);
 
       connect(connection, "tab", connection.sender.tab.id);
-    }else{
+    }else
+    {
       var parts = connection.name.split(":");
       if(parts.length === 2) {
           if(DEBUG)
@@ -121,6 +122,20 @@ setLocalPort("log", function(message) {
   if(DEBUG)
     console.debug(message.text);
 });
+
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  if(changeInfo.status === "complete") {
+    if(DEBUG)
+      console.debug("connecting to tab:%s", tabId);
+
+    var port = chrome.tabs.connect(tabId, {name: "bg:" + tabId});
+
+    connect(port, "tab", String(tab.id));
+  }
+});
+
+
+
 
 
 

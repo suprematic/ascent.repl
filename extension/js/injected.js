@@ -15,36 +15,48 @@ _cdtrepl.loadScript = function(url, callback) {
   document.body.removeChild(script);
 };
 
+var EVENT_IN = "CDTReplEventIn";
+var EVENT_OUT = "CDTReplEventOut";
+
 if(chrome.extension) { // we are content script
-  var port = chrome.runtime.connect();
+  chrome.runtime.onConnect.addListener(function (port) {
+    var filters = {};
+    filters["inject"] = function(message) {
+      message.url = chrome.extension.getURL("js/compiled/goog/base.js");
 
-  var filters = {};
-  filters["inject"] = function(message) {
-    message.url = chrome.extension.getURL("js/compiled/goog/base.js");
+      if(message.dependencies instanceof Array) {
+        message.dependencies.forEach(function(dep) {
+          dep.module = chrome.extension.getURL(dep.module);
+        });
+      }
 
-    if(message.dependencies instanceof Array) {
-      message.dependencies.forEach(function(dep) {
-        dep.module = chrome.extension.getURL(dep.module);
-      });
+      return message;
+    };
+
+    var documentListener = function(data) {
+        delete data["returnValue"]; // prevent warning
+        port.postMessage(data.detail);
     }
 
-    return message;
-  };
+    var portListener = function (message) {
+      var filter = filters[message.command];
+      
+      if(filter)
+        message = filter(message);
 
-  port.onMessage.addListener(function (message) {
-    var filter = filters[message.command];
-    if(filter)
-      message = filter(message);
+      document.dispatchEvent(new CustomEvent(EVENT_IN, {detail: message}));
+    };
 
-    document.dispatchEvent(new CustomEvent("CDTReplEventIn", {detail: message}));
+    document.addEventListener(EVENT_OUT, documentListener);
+    port.onMessage.addListener(portListener);
+
+    port.onDisconnect.addListener(function (port) {
+      document.removeEventListener(EVENT_OUT, documentListener);
+      port.onMessage.removeListener(portListener);
+    });
+
+    _cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));
   });
-
-  document.addEventListener("CDTReplEventOut", function(data) {
-      delete data["returnValue"]; // prevent warning
-      port.postMessage(data.detail);
-  });
-
-  _cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));  
 }else{
   (function ()
     {
@@ -55,7 +67,7 @@ if(chrome.extension) { // we are content script
       };
 
       var sendOut = function(message) {
-        document.dispatchEvent(new CustomEvent("CDTReplEventOut", {detail: message})); 
+        document.dispatchEvent(new CustomEvent(EVENT_OUT, {detail: message})); 
       };
 
       var send_probe = function() {
@@ -136,7 +148,7 @@ if(chrome.extension) { // we are content script
         }
       };
 
-      document.addEventListener("CDTReplEventIn", function(data) {
+      document.addEventListener(EVENT_IN, function(data) {
         var handler = handlers[data.detail.command];
         if(handler)
           handler(data.detail);
