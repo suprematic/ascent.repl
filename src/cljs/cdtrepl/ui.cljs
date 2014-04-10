@@ -2,11 +2,13 @@
   (:require 
       [reagent.core :as reagent :refer [atom]]
       [cdtrepl.ui-settings :as settings]
-      [khroma.runtime :as kruntime]))
+      [khroma.runtime :as kruntime]
+      [khroma.log :as log]
+      [khroma.util :as util]))
 
 
 
-(defn toolbar-div [{:keys [on-reset ns]}]
+(defn toolbar-div [{:keys [on-reset tab] :as model}]
   [:div
     {
       :id "toolbar"
@@ -45,8 +47,10 @@
           }
        }  
 
-       (str "<ns: " @ns ">")
+       (str "<ns: " @(:ns tab) ">")
     ]
+    
+ 
     
     [:div
       {
@@ -90,7 +94,7 @@
   ]
 )
 
-(defn input-div [{:keys [statement on-execute on-history-backward on-history-forward]}]
+(defn input-div [{:keys [statement on-execute on-history-backward on-history-forward tab-info]}]
   [:div
     {
       :id "input"
@@ -107,39 +111,41 @@
 
     [prompt-div {:image "img/prompt.png"}]
 
-    [:input
-      {
-        :type "text"
-        :style {
-          :clear "both"
-          :border "none"
-          :margin "0"
-          :padding "0"
-          :height "100%"
-          :width "90%"
-          :outline "0"
-        }
+        [:input
+          {
+            :type "text"
+            :style {
+              :clear "both"
+              :border "none"
+              :margin "0"
+              :padding "0"
+              :height "100%"
+              :width "90%"
+              :outline "0"
+            }
 
-        :spellCheck "false"
+            :spellCheck "false"
 
-        :value @statement
+            :value @statement
 
-        :on-change #(reset! statement (-> % .-target .-value))
-        :on-key-down #(let [key (.-which %)]
-                (case key
-                  13
-                   (on-execute)
+            :on-change #(reset! statement (-> % .-target .-value))
+            :on-key-down #(let [key (.-which %)]
+                    (case key
+                      13
+                       (on-execute)
 
-                  38
-                   (on-history-backward)
+                      38
+                       (on-history-backward)
 
-                  40
-                   (on-history-forward)
+                      40
+                       (on-history-forward)
 
 
-                  nil))
-      }
-    ]
+                      nil))
+          }
+        ]
+        
+    
   ]
 )
 
@@ -237,20 +243,37 @@
   ]
 )
 
-
 (defn log-div [{:keys [entries]}]
   [:div
     (for [entry (:items @entries)]
-      [log-entry entry])
-  ]
+      [log-entry entry])])
+
+(defn no-clojure [tab]
+    [:div
+      {
+       :style {
+        :color "red"       
+        :float "left"
+        :padding "5px"
+       }
+      }
+      
+      "ClojureSceript core (cljs.core) is not available in this page. Click " 
+      
+      [:a 
+       { 
+          :href "#"
+          :on-click (:on-inject tab)
+       } "here"] 
+      
+      " to inject it." 
+    ]
 )
 
-(defn root-div [model]
-  (fn []
+(defn repl [model]
+  [:div
     [:div
-      [:div
-        [toolbar-div (assoc (:toolbar model) :ns (:ns model))]
-
+      [toolbar-div (assoc (:toolbar model) :tab (:tab model))]
         [:div 
           {
             :style {
@@ -261,12 +284,23 @@
               :bottom "0px"
             }
           }
-
+         
           [log-div   (:log model)] 
           [input-div (:input model)] 
         ]
-      ]
     ]
+  ]
+)
+
+
+(defn root-div [model]
+  (fn []
+    (if-let [ti @(get-in model [:tab :info])]      
+      (if (:is_cljs ti)            
+        (repl model)
+        (no-clojure (:tab model)))
+      [:span (if false "No tab information received from the background page." "")]
+    )
   )
 )
  
