@@ -15,8 +15,8 @@ _cdtrepl.loadScript = function(url, callback) {
   document.body.removeChild(script);
 };
 
-var EVENT_IN = "CDTReplEventIn";
-var EVENT_OUT = "CDTReplEventOut";
+_cdtrepl.EVENT_IN = "CDTReplEventIn";
+_cdtrepl.EVENT_OUT = "CDTReplEventOut";
 
 if(chrome.extension) { // we are content script
   chrome.runtime.onConnect.addListener(function (port) {
@@ -44,34 +44,33 @@ if(chrome.extension) { // we are content script
       if(filter)
         message = filter(message);
 
-      document.dispatchEvent(new CustomEvent(EVENT_IN, {detail: message}));
+      if(message)
+        document.dispatchEvent(new CustomEvent(_cdtrepl.EVENT_IN, {detail: message}));
     };
 
-    document.addEventListener(EVENT_OUT, documentListener);
+    document.addEventListener(_cdtrepl.EVENT_OUT, documentListener);
     port.onMessage.addListener(portListener);
 
     port.onDisconnect.addListener(function (port) {
-      document.removeEventListener(EVENT_OUT, documentListener);
+      document.removeEventListener(_cdtrepl.EVENT_OUT, documentListener);
       port.onMessage.removeListener(portListener);
     });
 
-    _cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));
+    //_cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));
   });
 }else{
   (function ()
     {
       var DEBUG = true;
 
-      var is_cljs = function() {
-        return (typeof cljs) != "undefined" && cljs.core != undefined;
-      };
-
       var sendOut = function(message) {
-        document.dispatchEvent(new CustomEvent(EVENT_OUT, {detail: message})); 
+        document.dispatchEvent(new CustomEvent(_cdtrepl.EVENT_OUT, {detail: message})); 
       };
 
-      var send_probe = function() {
-        sendOut({type: "tab-info", is_cljs: is_cljs()});  
+      var sendProbe = function() {
+        var is_cljs = (typeof cljs) != "undefined" && cljs.core != undefined;;
+
+        sendOut({type: "tab-info", is_cljs: is_cljs});  
       };
 
       var handlers = {};
@@ -148,16 +147,16 @@ if(chrome.extension) { // we are content script
         }
       };
 
-      document.addEventListener(EVENT_IN, function(data) {
+      document.addEventListener(_cdtrepl.EVENT_IN, function(data) {
         var handler = handlers[data.detail.command];
         if(handler)
           handler(data.detail);
       });
 
       if(document.readyState == "complete") {
-        send_probe();
+        sendProbe();
       }else{
-        window.addEventListener("load", send_probe);
+        window.addEventListener("load", sendProbe);
       }
     }
   )();
