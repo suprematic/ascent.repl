@@ -2,6 +2,7 @@
   (:require 
     [cljs.core.async :as async]
     [khroma.runtime :as runtime]
+    [khroma.log :as log]
     [khroma.extension :as extension]
     [clojure.walk :as walk])
   
@@ -19,7 +20,7 @@
 
 (defn log [& parts]
   (if-let [ch @background-channel]
-    (go (>! ch {:destination "log" :text (apply str parts)}))))
+    (go (>! ch {:destination "background" :type "log" :text (apply str parts)}))))
 
 (defn- on-message [message]
   (if-let [handler (@handlers (:type message))]
@@ -61,7 +62,7 @@
   (>background
     {
       :destination  "tab" 
-      :command      "inject" 
+      :type      "inject" 
       :dependencies 
         (make-dependencies
           ["js/compiled/goog/base.js"                ["goog"]                                        []]
@@ -81,7 +82,7 @@
   (>background
     {
       :destination  "tab"
-      :command      "create-ns"
+      :type      "create-ns"
       :immigrate    true
       :ns           name
     }))
@@ -110,7 +111,7 @@
     (>background 
       {
         :destination "tab"
-        :command "eval"
+        :type "eval"
         :id id
         :statement statement
       }
@@ -126,6 +127,17 @@
         (async/close! ch)))
     
     (swap! requests assoc id ch) ch))
+
+(defn inject-agent [tab-id]
+  (>background
+    {
+      :destination "background"
+      :type        "inject-agent"
+      :tabId        tab-id  
+    }
+  )      
+)
+
 
 
 

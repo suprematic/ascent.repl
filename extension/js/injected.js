@@ -35,11 +35,12 @@ if(chrome.extension) { // we are content script
 
     var documentListener = function(data) {
         delete data["returnValue"]; // prevent warning
+
         port.postMessage(data.detail);
     }
 
     var portListener = function (message) {
-      var filter = filters[message.command];
+      var filter = filters[message.type];
       
       if(filter)
         message = filter(message);
@@ -56,7 +57,7 @@ if(chrome.extension) { // we are content script
       port.onMessage.removeListener(portListener);
     });
 
-    //_cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));
+    _cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));
   });
 }else{
   (function ()
@@ -70,7 +71,7 @@ if(chrome.extension) { // we are content script
       var sendProbe = function() {
         var is_cljs = (typeof cljs) != "undefined" && cljs.core != undefined;;
 
-        sendOut({type: "tab-info", is_cljs: is_cljs});  
+        sendOut({destination: "background", type: "tab-info", agentInfo: {is_cljs: is_cljs}});  
       };
 
       var handlers = {};
@@ -90,9 +91,17 @@ if(chrome.extension) { // we are content script
             }
 
             var requires = request.requires;
+            var count = 0;
             if(requires instanceof Array) {
               goog.writeScriptTag_ = function (url) {   // be able to load scripts after page load
-                _cdtrepl.loadScript(url, send_probe);   // check if cljs is available after every loaded module
+                count++;
+
+                _cdtrepl.loadScript(url, function() {
+                  count--;
+
+                  if(count === 0)
+                    sendProbe();
+                });    
               };
 
               requires.forEach(goog.require);  
@@ -148,7 +157,7 @@ if(chrome.extension) { // we are content script
       };
 
       document.addEventListener(_cdtrepl.EVENT_IN, function(data) {
-        var handler = handlers[data.detail.command];
+        var handler = handlers[data.detail.type];
         if(handler)
           handler(data.detail);
       });

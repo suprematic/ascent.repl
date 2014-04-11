@@ -9,7 +9,8 @@
       [khroma.devtools :as devtools]
       [khroma.extension :as extension]
       [khroma.runtime :as runtime]
-      [cljs.core.async :as async]
+      [cljs.core.async :as async] 
+      [khroma.tabs :as tabs]
       [khroma.log :as log])
  
   (:require-macros 
@@ -117,7 +118,7 @@
 
 
       :on-history-backward #(history-step (:input page-model) compute-idx-backward)
-      :on-history-forward #(history-step (:input page-model) compute-idx-forward)
+      :on-history-forward  #(history-step (:input page-model) compute-idx-forward)
     }
     
     :settings {
@@ -127,8 +128,13 @@
     :tab {
       :ns         (atom "cljs.user")
       :info       (atom nil)
-      :on-inject #(background/inject-cljs)
+      :url        (atom nil)
+      
+      :on-inject-agent  #(background/inject-agent @devtools/tab-id)
+      :on-inject-agent-auto  #(background/inject-agent @devtools/tab-id)
     }
+    
+    :progress (atom false)
   } 
 ) 
 
@@ -151,14 +157,31 @@
       (async/pipe out)))
 
 (background/handler "tab-info"
-  (fn [message] 
-      (when (:is_cljs message)
-        (background/create-ns @(get-in page-model [:tab :ns])))
-      
+  (fn [{:keys [info] :as message}] 
       (reset! 
-        (get-in page-model [:tab :info]) (dissoc message :type))))
+        (get-in page-model [:tab :url]) (:url info))
+      
+      (let [ai (:agentInfo info)]
+        (when ai
+          (if (:is_cljs ai)
+            (background/create-ns 
+              @(get-in page-model [:tab :ns]))
+            (background/inject-cljs)))
+           
+        (reset! 
+          (get-in page-model [:tab :info]) ai))))
+
+(defn progress [delay]
+  (reset! (:progress page-model) true)    
+  
+  (go
+    (<! (async/timeout delay))
+    (reset! (:progress page-model) false)))
+
 
 (defn ^:export run []
+  (progress 250)      
+      
   (when (and devtools/available? runtime/available?)
     (background/connect-and-listen @devtools/tab-id))
       

@@ -248,26 +248,27 @@
     (for [entry (:items @entries)]
       [log-entry entry])])
 
-(defn no-clojure [tab]
-    [:div
-      {
-       :style {
-        :color "red"       
-        :float "left"
-        :padding "5px"
-       }
+(defn no-agent [tab]
+  [:div
+    {
+     :style {
+      :color    "blue"       
+      :padding-left  "15px"
+      :padding-top "5px"
       }
+    }
+    
+    [:p
+     
+        "Loaded page does not contain required instrumentation code. Click here to "
+      [:a {:style {:font-weight "bold"} :href "#" :on-click (:on-inject-agent tab)} "inject it once"]
+      ", or here to "
+      [:a {:style {:font-weight "bold"} :href "#" :on-click (:on-inject-agent-auto tab)} "automatically inject"]
       
-      "ClojureSceript core (cljs.core) is not available in this page. Click " 
-      
-      [:a 
-       { 
-          :href "#"
-          :on-click (:on-inject tab)
-       } "here"] 
-      
-      " to inject it." 
+      " it every time for "
+      [:span {:style {:color "grey" :font-style "italic"}} @(:url tab)]
     ]
+  ]        
 )
 
 (defn repl [model]
@@ -292,14 +293,14 @@
   ]
 )
 
-
 (defn root-div [model]
   (fn []
     (if-let [ti @(get-in model [:tab :info])]      
-      (if (:is_cljs ti)            
-        (repl model)
-        (no-clojure (:tab model)))
-      [:span (if false "No tab information received from the background page." "")]
+      (repl model)
+      (if-not @(:progress model)
+        (no-agent (:tab model))
+        [:div {:style {:padding "5" :color "grey"}} "Waiting..."] 
+      )
     )
   )
 )

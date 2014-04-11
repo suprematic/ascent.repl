@@ -27,53 +27,27 @@ var getPort = function(destination, tabId) {
 }
 
 var setLocalPort = function(destination, handler) {
-  setPort(destination, "*", {postMessage: handler, tabId: "*"})
+  setPort("background", destination, {postMessage: handler, tabId: "*"})
 }
 
 var getLocalPort = function(destination) {
-  return getPort(destination, "*")
+  return getPort("background", destination)
 }
-
-var onTabRemoved = function(tabId) {
-  delete tab_infos[tabId];
-};
-
-chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
-  onTabRemoved(tabId);
-});
-
-chrome.tabs.onReplaced.addListener(function(added, removed) {
-  onTabRemoved(removed);
-});
-
-var onMessage = function(sender, destination, tabId, message) {
-  if(sender === "tab" && message.type === "tab-info") {
-    tab_infos[tabId] = message;    
-
-    var port = getPort("repl", tabId);
-    if(port)
-      port.postMessage(message);
-  }
-};
-
-var onConnect = function(port, destination, tabId) {
-  if(destination !== "tab" && tab_infos[tabId]) {
-    if(DEBUG)
-      console.debug("sending tab info to %s:%s", destination, tabId);
-
-    port.postMessage(tab_infos[tabId]);
-  }
-};
 
 var connect = function(connection, destination, tabId) {
   setPort(destination, tabId, connection);
 
   var localOnMessage = function(message, sender, sendResponse) {
-    onMessage(destination, message.destination, tabId, message);
+    var port = null;
 
-    var port = getLocalPort(message.destination) || getPort(message.destination, tabId);
+    if(message.destination === "background")
+      port = getLocalPort(message.type);
+    else
+      port = getPort(message.destination, tabId);
+
     if(port) {
       message.source = destination;
+      message.sourceTabId = tabId;
 
       if(DEBUG)
         console.debug("message %s:%s -> %s:%s", destination, tabId, message.destination, port.tabId, message);
@@ -95,44 +69,84 @@ var connect = function(connection, destination, tabId) {
 
   connection.onMessage.addListener(localOnMessage);
   connection.onDisconnect.addListener(onDisconnect);
-
-  onConnect(connection, destination, tabId);
 };
 
 chrome.runtime.onConnect.addListener(function(connection) {
-    if(connection.sender && connection.sender.tab) {
+  var parts = connection.name.split(":");
+  if(parts.length === 2) {
       if(DEBUG)
-        console.debug("incoming connection from tab:%s", connection.sender.tab.id);
+        console.debug("incoming connection from %s", connection.name);
 
-      connect(connection, "tab", connection.sender.tab.id);
-    }else
-    {
-      var parts = connection.name.split(":");
-      if(parts.length === 2) {
-          if(DEBUG)
-            console.debug("incoming connection from %s", connection.name);
+      connect(connection, parts[0], parts[1]);
 
-          connect(connection, parts[0], parts[1]);
-      }
-    } 
+      var tabInfo = tab_infos[parts[1]];
+      if(tabInfo != null)
+        connection.postMessage({type: "tab-info", info: tabInfo});
+  }
 });
-
 
 setLocalPort("log", function(message) {
   if(DEBUG)
     console.debug(message.text);
 });
 
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-  if(changeInfo.status === "complete") {
-    if(DEBUG)
-      console.debug("connecting to tab:%s", tabId);
+setLocalPort("inject-agent", function(message) {
+  if(DEBUG)
+    console.debug("agent injection requested: ", message);
 
-    var port = chrome.tabs.connect(tabId, {name: "bg:" + tabId});
+  var tabId = message.tabId;
 
-    connect(port, "tab", String(tab.id));
+  chrome.tabs.executeScript(tabId, 
+    {
+      file: "js/injected.js"    
+    },
+    function(_result) {
+      if(DEBUG)
+        console.debug("connecting to tab:%s", tabId);
+
+      var port = chrome.tabs.connect(tabId, {name: "background:" + tabId});
+
+      connect(port, "tab", String(tabId));    
+    });  
+});
+
+setLocalPort("tab-info", function(message) {
+  if(message.source === "tab") { 
+    var tabInfo = tab_infos[message.sourceTabId];
+    if(tabInfo) {
+      tabInfo.agentInfo = message.agentInfo;
+
+      var port = getPort("repl", message.sourceTabId);
+      if(port != null)
+        port.postMessage({type: "tab-info", info: tabInfo});
+    }
   }
 });
+
+
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  if(changeInfo.status === "complete") {
+    tab_infos[tabId] = {agentInfo: null, url: tab.url};
+
+    var port = getPort("repl", tabId);
+    if(port) {
+      if(DEBUG)
+        console.log("to repl:%s", tabId, tab_infos[tabId]);
+
+      port.postMessage({type: "tab-info", info: tab_infos[tabId]});
+    }
+  }
+});
+
+chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
+  delete tab_infos[tabId];
+});
+
+chrome.tabs.onReplaced.addListener(function(added, removed) {
+  delete tab_infos[tabId];
+});
+
+
 
 
 

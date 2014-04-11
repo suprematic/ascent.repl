@@ -3,7 +3,7 @@
 
   "name": "ClojureScript REPL",
   "description": "ClojureScript REPL for Chrome DevTools",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "author": "Alexey Aristov",
 
   "icons": { "16": "img/manifest16.png",
@@ -19,5 +19,9 @@
 
   "web_accessible_resources": [
     "js/*"
-  ]
+  ],
+
+  "background": {
+    "scripts": ["js/background.js"]
+  }
 }
