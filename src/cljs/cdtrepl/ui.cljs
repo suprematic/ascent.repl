@@ -4,7 +4,10 @@
       [cdtrepl.ui-settings :as settings]
       [khroma.runtime :as kruntime]
       [khroma.log :as log]
-      [khroma.util :as util]))
+      [khroma.util :as util])
+  
+  (:require-macros 
+    [cljs.core.async.macros :refer [go alt! go-loop]]))
 
 
 
@@ -33,7 +36,7 @@
           :float "left"
         }
 
-        :on-click on-reset
+        :on-click #(go (>! on-reset {}))
       }
     ]
 
@@ -94,7 +97,7 @@
   ]
 )
 
-(defn input-div [{:keys [statement on-execute on-history-backward on-history-forward tab-info]}]
+(defn input-div [{:keys [statement on-execute on-history tab-info]}]
   [:div
     {
       :id "input"
@@ -110,7 +113,6 @@
     }
 
     [prompt-div {:image "img/prompt.png"}]
-
         [:input
           {
             :type "text"
@@ -129,19 +131,17 @@
             :value @statement
 
             :on-change #(reset! statement (-> % .-target .-value))
-            :on-key-down #(let [key (.-which %)]
-                    (case key
-                      13
-                       (on-execute)
+            :on-key-down #(let [key (.-which %)] 
+                            (go
+                              (case key
+                                13
+                                 (>! on-execute {})
 
-                      38
-                       (on-history-backward)
+                                38
+                                 (>! on-history {:direction :backward})
 
-                      40
-                       (on-history-forward)
-
-
-                      nil))
+                                40
+                                 (>! on-history {:direction :forward}) nil)))
           }
         ]
         
@@ -248,7 +248,7 @@
     (for [entry (:items @entries)]
       [log-entry entry])])
 
-(defn no-agent [tab]
+(defn no-agent [{:keys [on-inject-agent url] :as tab}]
   [:div
     {
      :style {
@@ -259,11 +259,10 @@
     }
     
     [:p
-     
         "Loaded page does not contain required instrumentation code. Click here to "
-      [:a {:style {:font-weight "bold"} :href "#" :on-click (:on-inject-agent tab)} "inject it once"]
+      [:a {:style {:font-weight "bold"} :href "#" :on-click #(go (>! on-inject-agent {:save-auto false}))} "inject it once"]
       ", or here to "
-      [:a {:style {:font-weight "bold"} :href "#" :on-click (:on-inject-agent-auto tab)} "automatically inject"]
+      [:a {:style {:font-weight "bold"} :href "#" :on-click #(go (>! on-inject-agent {:save-auto true }))} "automatically inject"]
       
       " it every time for "
       [:span {:style {:color "grey" :font-style "italic"}} @(:url tab)]

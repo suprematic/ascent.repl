@@ -1,17 +1,18 @@
 (ns cdtrepl.core
   (:require 
-     
       [reagent.core :as reagent :refer [atom]]
       [cdtrepl.ui :as ui]
       [cdtrepl.eval :as eval]
       [cdtrepl.background :as background]
       [cdtrepl.comp :as comp]
+      [cdtrepl.preferences :as prefs]
       [khroma.devtools :as devtools]
       [khroma.extension :as extension]
       [khroma.runtime :as runtime]
       [cljs.core.async :as async] 
       [khroma.tabs :as tabs]
-      [khroma.log :as log])
+      [khroma.log :as log]
+      )
  
   (:require-macros 
     [cljs.core.async.macros :refer [go alt! go-loop]]))
@@ -75,27 +76,29 @@
       (reset! statement (if new-index (nth @history new-index) "")))))
 
 
+(defn map>nil [f]
+  (async/map> f 
+    (async/chan 
+      (async/dropping-buffer 1))))
+
+(defn map<nil [ch f]
+  (async/pipe
+    (async/map< f ch)      
+      (async/chan (async/dropping-buffer 1))))
+
+
 (def page-model 
   {
     :in-channel   (async/chan)
- 
-    :out-channel  (async/map>
-                    (fn [result]
-                      (append-keyed-entry! (-> page-model :log :entries) result)
-                      (reset! (-> page-model :input :statement) "")) 
-                    (async/chan 
-                      (async/dropping-buffer 1)))
-    
+    :out-channel  (async/chan)
     
     :toolbar {
-      :on-reset #(reset! (-> page-model :log :entries) 
-             (empty-keyed-list))
+      :on-reset (async/chan)
     }
 
     :log  {
       :entries (atom (empty-keyed-list))
     }     
-
 
     :input {
       :history   (atom [])
@@ -103,22 +106,8 @@
 
       :statement (atom "")
 
-
-      :on-execute   #(let [statement-atom (-> page-model :input :statement)
-                           statement (clojure.string/trim @statement-atom)]
-
-                            (when-not (empty? statement)
-                              (append-history (:input page-model) statement)
-                              (go
-                                (log/debug "in-channel < " statement)
-
-                                (>! 
-                                  (:in-channel page-model) {:clj-statement statement :ns @(get-in page-model [:tab :ns])}))))
-
-
-
-      :on-history-backward #(history-step (:input page-model) compute-idx-backward)
-      :on-history-forward  #(history-step (:input page-model) compute-idx-forward)
+      :on-execute   (async/chan)
+      :on-history   (async/chan)
     }
     
     :settings {
@@ -130,13 +119,47 @@
       :info       (atom nil)
       :url        (atom nil)
       
-      :on-inject-agent  #(background/inject-agent @devtools/tab-id)
-      :on-inject-agent-auto  #(background/inject-agent @devtools/tab-id)
+      :on-inject-agent  (async/chan)
     }
     
     :progress (atom false)
+    
+    :preferences prefs/model
   } 
 ) 
+
+(map<nil (get-in page-model [:tab :on-inject-agent])
+  (fn [message]
+    (when (:save-auto message)
+      (prefs/add-auto-inject! @(get-in page-model [:tab :url])))
+    
+    (background/inject-agent @devtools/tab-id)))
+
+(map<nil (get-in page-model [:toolbar :on-reset])
+  #(reset! (-> page-model :log :entries) 
+    (empty-keyed-list)))
+
+(map<nil (get-in page-model [:input :on-execute])
+  #(let [statement-atom (get-in page-model [:input :statement])
+         statement (clojure.string/trim @statement-atom)]
+
+        (when-not (empty? statement)
+          (append-history (:input page-model) statement)
+          (go
+            (log/debug "in-channel < " statement)
+
+            (>! 
+              (:in-channel page-model) {:clj-statement statement :ns @(get-in page-model [:tab :ns])})))))  
+  
+(map<nil (get-in page-model [:out-channel])
+  (fn [result]
+    (append-keyed-entry! (get-in page-model [:log :entries]) result)
+    (reset! (-> page-model :input :statement) "")))
+
+(map<nil (get-in page-model [:input :on-history])
+  #(history-step (:input page-model) 
+    (case (:direction %) :backward compute-idx-backward :forward compute-idx-forward)))
+
 
 (defn ns-handler [in out]
   (let [[in pass] (async/split #(:ns-change %) in)]
@@ -158,19 +181,22 @@
 
 (background/handler "tab-info"
   (fn [{:keys [info] :as message}] 
+    (reset! 
+      (get-in page-model [:tab :url]) (:url info))
+    
+    (let [ai (:agentInfo info)]
       (reset! 
-        (get-in page-model [:tab :url]) (:url info))
+        (get-in page-model [:tab :info]) ai)             
       
-      (let [ai (:agentInfo info)]
-        (when ai
-          (if (:is_cljs ai)
-            (background/create-ns 
-              @(get-in page-model [:tab :ns]))
-            (background/inject-cljs)))
+      (if ai
+        (if (:is_cljs ai)
+          (background/create-ns 
+            @(get-in page-model [:tab :ns]))
+          (background/inject-cljs))
+        
+        (if (prefs/auto-inject? (:url info))  
+          (background/inject-agent @devtools/tab-id))))))
            
-        (reset! 
-          (get-in page-model [:tab :info]) ai))))
-
 (defn progress [delay]
   (reset! (:progress page-model) true)    
   
@@ -179,12 +205,15 @@
     (reset! (:progress page-model) false)))
 
 
+
 (defn ^:export run []
   (progress 250)      
       
   (when (and devtools/available? runtime/available?)
     (background/connect-and-listen @devtools/tab-id))
-      
+
+  (background/log "starting REPL ui")    
+        
   (setup-routing 
     (:in-channel page-model) (:out-channel page-model) (:out-channel page-model))
       
