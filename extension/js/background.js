@@ -98,7 +98,7 @@ var connect = function(connection, destination, tabId) {
 
   var onDisconnect = function(connection) {
     if(DEBUG)
-      console.debug("desconnecting %s:%s", destination, tabId);
+      console.debug("disconnecting %s:%s", destination, tabId);
 
     connection.onMessage.removeListener(localOnMessage);  
     removePort(destination, tabId);
@@ -178,6 +178,9 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   var tabId = String(tabId);
 
   if(changeInfo.status === "complete") {
+    if(DEBUG)
+      console.debug("tab updated: " + tab.url);
+
     setTabInfo(tabId, {agentInfo: null, url: tab.url});
 
     var port = getPort("repl", tabId);
@@ -195,7 +198,7 @@ chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
 });
 
 chrome.tabs.onReplaced.addListener(function(added, removed) {
-  removeTabInfo(String(tabId));
+  removeTabInfo(String(removed));
 });
 
 
