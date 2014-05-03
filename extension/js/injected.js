@@ -8,8 +8,8 @@ _cdtrepl.loadScript = function(url, callback) {
     script.onload = callback;
 
   script.setAttribute('src', url);
-  script.setAttribute('defer', false);
-  script.setAttribute('async', true);
+//  script.setAttribute('defer', false);
+  script.setAttribute('async', false);
 
   document.body.appendChild(script);
   document.body.removeChild(script);
@@ -19,9 +19,10 @@ _cdtrepl.EVENT_IN = "CDTReplEventIn";
 _cdtrepl.EVENT_OUT = "CDTReplEventOut";
 
 if(chrome.extension) { // we are content script
-  chrome.runtime.onConnect.addListener(function (port) {
-    var filters = {};
-    filters["inject"] = function(message) {
+  var DEBUG = true;
+
+  var filters = {};
+  filters["inject"] = function(message) {
       message.url = chrome.extension.getURL("js/compiled/goog/base.js");
 
       if(message.dependencies instanceof Array) {
@@ -31,7 +32,13 @@ if(chrome.extension) { // we are content script
       }
 
       return message;
-    };
+  };
+
+
+  chrome.runtime.onConnect.addListener(function (port) {
+    var log = function(message) {
+      port.postMessage({destination: "background", type: "log", text: message});
+    }
 
     var documentListener = function(data) {
         delete data["returnValue"]; // prevent warning
@@ -57,7 +64,12 @@ if(chrome.extension) { // we are content script
       port.onMessage.removeListener(portListener);
     });
 
-    _cdtrepl.loadScript(chrome.extension.getURL('js/injected.js'));
+    var toInject = 'js/injected.js';
+
+    if(DEBUG)
+      log("injecting agent to the document: " + toInject);
+
+    _cdtrepl.loadScript(chrome.extension.getURL(toInject));
   });
 }else{
   (function ()
@@ -65,19 +77,26 @@ if(chrome.extension) { // we are content script
       var DEBUG = true;
 
       var sendOut = function(message) {
+        if(!message.destination)
+          message.destination = "background"; // send to background by default
+
         document.dispatchEvent(new CustomEvent(_cdtrepl.EVENT_OUT, {detail: message})); 
       };
+
+      var log = function(message) {
+        sendOut({type: "log", text: message});
+      }
 
       var sendProbe = function() {
         var is_cljs = (typeof cljs) != "undefined" && cljs.core != undefined;;
 
-        sendOut({destination: "background", type: "tab-info", agentInfo: {is_cljs: is_cljs}});  
+        sendOut({type: "tab-info", agentInfo: {is_cljs: is_cljs}});  
       };
 
       var handlers = {};
       handlers["inject"] = function(request) {
         if(DEBUG)
-          console.debug("injection requested: ", request);
+          log("injection requested: " + request);
 
         var onGoogAvailable = function () {
             var dependencies = request.dependencies;
@@ -86,7 +105,7 @@ if(chrome.extension) { // we are content script
                 if(dependency.module && dependency.provides instanceof Array && dependency.requires instanceof Array)
                   goog.addDependency(dependency.module, dependency.provides, dependency.requires);
                 else
-                  console.warn("invalid dependency entry: ", dependency);
+                  log("invalid dependency entry: ", dependency);
               });
             }
 
@@ -110,7 +129,7 @@ if(chrome.extension) { // we are content script
 
         if((typeof goog) === "undefined") {
           if(DEBUG)
-            console.info("goog is not available. loading it from " + request.url);
+            log("goog is not available. loading it from " + request.url);
 
           _cdtrepl.loadScript(request.url, onGoogAvailable);
         } else
@@ -133,14 +152,14 @@ if(chrome.extension) { // we are content script
             }
           }else {
             if(DEBUG) 
-              console.warn("namespace already exists: " + ns);
+              log("namespace already exists: " + ns);
           }
         }
       };
 
       handlers["eval"] = function(request) {
         if(DEBUG)
-          console.debug("eval request: ", request);
+          log("eval request: " + request);
 
         var statement = request.statement;
         if(statement) {
@@ -162,9 +181,15 @@ if(chrome.extension) { // we are content script
           handler(data.detail);
       });
 
-      if(document.readyState == "complete") {
+
+      if(document.readyState === "complete" || document.readyState === "interactive") { // is "interactive" is ok
+        if(DEBUG)
+          log("agent injected, readyState == complete|interactive. sending out probe.");
+
         sendProbe();
       }else{
+        log("agent injected, readyState: != complete. adding load listener");
+
         window.addEventListener("load", sendProbe);
       }
     }
