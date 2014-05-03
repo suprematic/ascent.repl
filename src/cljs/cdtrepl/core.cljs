@@ -83,7 +83,7 @@
 
 (map<nil (state/get-in [:toolbar :on-reset])
   #(reset! (state/get-in [:log :entries]) 
-    (model/empty-keyed-list)))
+    (state/empty-keyed-list)))
 
 (map<nil (state/get-in [:input :on-execute])
   #(let [statement-atom (state/get-in [:input :statement])
