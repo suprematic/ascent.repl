@@ -1,7 +1,7 @@
 (ns cdtrepl.ui
   (:require 
       [reagent.core :as reagent :refer [atom]]
-      [cdtrepl.ui-settings :as settings]
+      [cdtrepl.settings-ui :as settings]
       [khroma.runtime :as kruntime]
       [khroma.log :as log]
       [khroma.util :as util])
@@ -11,7 +11,7 @@
 
 
 
-(defn toolbar-div [{:keys [on-reset tab] :as model}]
+(defn toolbar-div [{:keys [on-reset on-settings-show on-about tab] :as model}]
   [:div
     {
       :id "toolbar"
@@ -24,21 +24,21 @@
       }
     }
 
-    [:div 
+    [:div
       {
-        :id "clear"
         :style {
           :height "100%"
-          :width "20px"
-          :background-image "url(img/clear_grey.png)"
-          :background-position "center"
-          :background-repeat "no-repeat"
-          :float "left"
+          :width "16px"
+          :margin-left "5px"
+          :background "url(img/clear.png) no-repeat center center"
+          :float "left"        
+          :cursor "pointer"   
         }
-
         :on-click #(go (>! on-reset {}))
-      }
+        :title "Clear"
+      }  
     ]
+    
 
     [:div
        {
@@ -54,12 +54,45 @@
     ]
     
  
+ 
+    [:div
+      {
+        :style {
+          :height "100%"
+          :width "16px"
+          :background "url(img/about.png) no-repeat center center"
+          :float "right"
+          :margin-right "5px"    
+          :cursor "pointer"      
+        }
+        :on-click #(go (>! on-about {}))
+        :title "About"
+      }  
+    ]
+ 
+    [:div
+      {
+        :style {
+          :height "100%"
+          :width "16px"
+          :background "url(img/settings.png) no-repeat center center"
+          :float "right" 
+          :margin-right "3px"  
+          :cursor "pointer"    
+        }
+        
+        :on-click #(go (>! on-settings-show {}))
+        :title "Settings"  
+      }  
+    ]
+ 
     
     [:div
       {
         :style {
           :float "right"
           :color "grey"
+          :display "none"
           :padding-top "4px"
           :margin-right "5px"        
         }
@@ -272,6 +305,8 @@
 
 (defn repl [model]
   [:div
+
+   
     [:div
       [toolbar-div (assoc (:toolbar model) :tab (:tab model))]
         [:div 
@@ -292,15 +327,71 @@
   ]
 )
 
+(defn settings [model]
+  [:div "Settings"]      
+    
+)
+
+
+(defn atom-input [{:keys [value]}]
+  [:input#xxx {:type "text"
+           :value @value
+           :on-change #(reset! value (-> % .-target .-value))}])
+
+(defn _root-div []
+  (let [val (reagent/atom "foo")]
+    (fn []
+      [:div
+       [:p "The value is now: " @val]
+       [:p "Change it here: " [atom-input {:value val}]]])))
+
+
+
 (defn root-div [model]
   (fn []
-    (if-let [ti @(get-in model [:tab :info])]      
-      (repl model)
-      (if-not @(:progress model)
-        (no-agent (:tab model))
-        [:div {:style {:padding "5" :color "grey"}} "Waiting..."] 
+    [:div  
+      {
+      }
+          
+      (if-let [ti @(get-in model [:tab :info])]      
+        (repl model)
+        (if-not @(:progress model)
+          (no-agent (:tab model))
+          [:div {:style {:padding "5" :color "grey"}} "Waiting..."] 
+        )
       )
-    )
+      
+      (when @(get-in model [:settings :visible])
+        [:div    
+            {
+              :style  {
+                :position "absolute"
+                :top "0px"
+                :bottom "0px"
+                :left "0px"
+                :right "0px"
+              }
+            }    
+                  
+          [:div
+            {
+              :style  {
+                :position "absolute"
+                :top "10px"
+                :bottom "10px"
+                :left "10px"
+                :right "10px"
+                :background-color "white"            
+                :border "1px solid #aaa"
+                :-webkit-box-shadow "2px 2px 1px rgba(99, 99, 99, 0.75)"
+              }
+            }
+            
+            (settings/settings-div (:settings model)) 
+          ]
+        ]
+      )
+    ]
   )
 )
  

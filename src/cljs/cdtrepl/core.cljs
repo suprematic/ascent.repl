@@ -6,7 +6,7 @@
       [cdtrepl.state :as state]
       [cdtrepl.background :as background]
       [cdtrepl.comp :as comp]
-      [cdtrepl.preferences :as prefs]
+      [cdtrepl.settings :as settings]
       [khroma.devtools :as devtools]
       [khroma.extension :as extension]
       [khroma.runtime :as runtime]
@@ -77,13 +77,22 @@
 (map<nil (state/get-in [:tab :on-inject-agent])
   (fn [message]
     (when (:save-auto message)
-      (prefs/add-auto-inject! @(state/get-in [:tab :url])))
+      (settings/add-auto-inject! @(state/get-in [:tab :url])))
     
     (background/inject-agent @devtools/tab-id)))
 
 (map<nil (state/get-in [:toolbar :on-reset])
   #(reset! (state/get-in [:log :entries]) 
     (state/empty-keyed-list)))
+
+(map<nil (state/get-in [:toolbar :on-about])
+  #(log/info "about"))
+
+(map<nil (state/get-in [:toolbar :on-settings-show])
+  #(reset! (state/get-in [:settings :visible]) true))
+
+(map<nil (state/get-in [:settings :on-settings-hide])
+  #(reset! (state/get-in [:settings :visible]) false))
 
 (map<nil (state/get-in [:input :on-execute])
   #(let [statement-atom (state/get-in [:input :statement])
@@ -140,7 +149,7 @@
             @(state/get-in [:tab :ns]))
           (background/inject-cljs))
         
-        (if (prefs/auto-inject? (:url info))  
+        (if (settings/auto-inject? (:url info))  
           (background/inject-agent @devtools/tab-id))))))
            
 (defn progress [delay]
