@@ -1,6 +1,5 @@
 (ns cdtrepl.eval
   (:require 
-    [reagent.core :as reagent :refer [atom]]
     [clojure.walk :as cw]
     [cdtrepl.background :as background]
     [khroma.log :as log]
@@ -21,9 +20,10 @@
 (defn evaluator [in-ch]
   (let [out-ch (async/chan)]
     (go-loop [request (<! in-ch)]
-      (log/debug "cdt evaluator < " request)
+      ;(log/debug "cdt evaluator < " request)
 
       (let [result (<! (background/eval (:js-statement request)))]
+        ;(log/debug "cdt eveluator < " result)
         (>! out-ch
           (if-not (:exception result)
             (ok-result request result)

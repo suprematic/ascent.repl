@@ -1,6 +1,5 @@
 (ns cdtrepl.settings
-  (:require 
-    [reagent.core :as reagent :refer [atom]]
+  (:require
     [alandipert.storage-atom :as webstorage :refer [local-storage]]))
 
 (def model
@@ -14,6 +13,13 @@
         (atom "ws://localhost:9093/ws") :service-url)
   }
 )
+
+
+(defn >state [model]
+  {
+    :auto-inject @(:auto-inject model)
+    :service-url @(:service-url model)})
+
 
 
 (defn auto-inject? [url]

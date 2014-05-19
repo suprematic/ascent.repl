@@ -17,7 +17,6 @@
     [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
     [jarohen/chord "0.3.1"]
     [alandipert/storage-atom "1.2.2"]
-    [reagent "0.4.2"]
     [om "0.6.2"]]
 
 
