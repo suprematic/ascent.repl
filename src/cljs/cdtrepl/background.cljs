@@ -136,6 +136,13 @@
       :tabId        tab-id  
     }))
 
+(defn reload! [ns]
+  (>background {
+    :destination "tab"
+    :type "reload"
+    :ns ns }))
+
+
 
 
 

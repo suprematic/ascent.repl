@@ -8,12 +8,27 @@ _cdtrepl.loadScript = function(url, callback) {
     script.onload = callback;
 
   script.setAttribute('src', url);
-//  script.setAttribute('defer', false);
   script.setAttribute('async', false);
 
   document.body.appendChild(script);
   document.body.removeChild(script);
 };
+
+if(!_cdtrepl.extension) {
+  _cdtrepl.clearNS = function(ns) {
+    if(!goog.getObjectByName(ns))
+      throw Error('no namespace defined: ' + ns);
+
+    var parts  = ns.split('.');
+    var name   = parts[parts.length - 1];
+    var parent = parts.length > 1 ? parts.slice(0, parts.length - 1).join(".") : null;
+
+    if(parent != null)
+      delete goog.getObjectByName(parent)[name];
+    else
+      goog.globalEval('delete ' + name + ';');
+  }
+}
 
 _cdtrepl.EVENT_IN = "CDTReplEventIn";
 _cdtrepl.EVENT_OUT = "CDTReplEventOut";
@@ -92,6 +107,9 @@ if(chrome.extension) { // we are content script
 
         sendOut({type: "tab-info", agentInfo: {is_cljs: is_cljs}});  
       };
+
+
+
 
       var withPatchedGoog = function(fn) {
         var orig_provide = goog.provide;
@@ -207,6 +225,21 @@ if(chrome.extension) { // we are content script
 
           sendOut({destination: request.source, type: "eval-response", id: request.id, result: result});
         }
+      };
+
+      handlers["reload"] = function(request) {
+        var ns = request.ns;
+
+        if(DEBUG)
+          log("reload requested for ns: " + ns);
+
+          if(goog.isProvided_(ns)) {
+            var path = goog.getPathFromDeps_(ns);
+            if(path) {  
+              _cdtrepl.clearNS(ns);
+              _cdtrepl.loadScript(goog.basePath + "/../" + path);
+            } 
+          }
       };
 
       document.addEventListener(_cdtrepl.EVENT_IN, function(data) {

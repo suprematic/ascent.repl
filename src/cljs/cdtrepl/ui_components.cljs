@@ -69,6 +69,8 @@
               :margin-left "15px" 
               :float "left"
               :color "grey"}}  (str "<ns: " ns ">"))
+
+          (button {:image "img/reload.png" :on-click #(util/>channel owner :reload true)})
           
           (button {:float "right" :image "img/about.png"})
           (button {:float "right" :image "img/settings.png" :on-click #(util/>channel owner :settings {:show true})})))))

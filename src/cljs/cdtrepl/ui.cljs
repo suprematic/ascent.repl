@@ -2,6 +2,7 @@
   (:require 
       [cdtrepl.settings-ui]
       [cdtrepl.settings :as settings]
+      [cdtrepl.background :as background]
       [khroma.runtime :as kruntime]
       [khroma.log :as log]
       [cljs.core.async :as async] 
@@ -42,11 +43,15 @@
   (when-not (nil? show)
     (om/update! state :settings-visible show)))
 
+(defn on-reload [state owner message]
+  (let [ns (get-in @state [:tab-info :ns])]
+    (background/reload! ns)))
 
 (defn listent-channels [channels state owner] 
   (util/broadcast    
     (listen-channel (:result channels) on-result state owner)
     (listen-channel (:clear channels) on-clear state owner)
+    (listen-channel (:reload channels) on-reload state owner)
     (listen-channel (:settings channels) on-settings state owner)
     (listen-channel (:history channels) on-history state owner)
     (listen-channel (:tab-info channels) on-tab-info state owner)))
@@ -78,6 +83,7 @@
 (defn make-channels [] {
   :execute      (async/chan 256)
   :result       (async/chan 256)
+  :reload       (async/chan 256)
   :input        (async/chan 256)
   :tab-info     (async/chan 256)
   :inject-agent (async/chan 256)
