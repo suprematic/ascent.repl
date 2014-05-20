@@ -28,6 +28,19 @@ if(!_cdtrepl.extension) {
     else
       goog.globalEval('delete ' + name + ';');
   }
+
+  _cdtrepl.ensureNS = function(ns, immigrate) {
+    goog.provide(ns);
+
+    if(immigrate) {
+      var to = goog.getObjectByName(ns);
+      var from  = goog.getObjectByName(immigrate);
+
+      for(prop in from)
+        if(!to[prop])
+          to[prop] = from[prop];  
+    }
+  }
 }
 
 _cdtrepl.EVENT_IN = "CDTReplEventIn";
@@ -114,22 +127,12 @@ if(chrome.extension) { // we are content script
       var withPatchedGoog = function(fn) {
         var orig_provide = goog.provide;
         var orig_requre = goog.require;
-        var last_provided = null;
 
         try {
           goog.provide = function(ns) {
-            last_provided = ns;
           };
 
           goog.require = function(ns) {
-            if(last_provided) {
-              var to = goog.getObjectByName(last_provided);
-              var from  = goog.getObjectByName(ns);
-
-              for(prop in from)
-                if(!to[prop])
-                  to[prop] = from[prop];
-            }
           };
 
           fn();
@@ -213,8 +216,9 @@ if(chrome.extension) { // we are content script
           var result = null;
 
           try {
-            if(!goog.isProvided_(request.ns))
-              goog.provide(request.ns);
+            if(!goog.isProvided_(request.ns)) {
+              _cdtrepl.ensureNS(request.ns, "cljs.core");
+            }
 
             withPatchedGoog(function() {
               result = String(eval(statement));
@@ -247,7 +251,6 @@ if(chrome.extension) { // we are content script
         if(handler)
           handler(data.detail);
       });
-
 
       if(document.readyState === "complete" || document.readyState === "interactive") { // is "interactive" is ok
         if(DEBUG)
