@@ -22,7 +22,7 @@
     (go-loop [request (<! in-ch)]
       ;(log/debug "cdt evaluator < " request)
 
-      (let [result (<! (background/eval (:js-statement request)))]
+      (let [result (<! (background/eval (:js-statement request) (:response-ns request)))]
         ;(log/debug "cdt eveluator < " result)
         (>! out-ch
           (if-not (:exception result)

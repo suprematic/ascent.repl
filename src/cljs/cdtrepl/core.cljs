@@ -12,37 +12,21 @@
       [khroma.runtime :as runtime]
       [cljs.core.async :as async] 
       [khroma.tabs :as tabs]
-      [khroma.log :as log] 
-      )
+      [khroma.log :as log])
  
   (:require-macros 
     [cljs.core.async.macros :refer [go alt! go-loop]]))
 
-(def tab-ns 
-  (atom "cljs.user"))
-
-(defn ns-handler [in out {:keys [tab-info]} ns-holder]
-  (let [[in pass] (async/split #(:ns-change %) in)]
-    (async/pipe 
-      (async/map< 
-        (fn [{:keys [response-ns] :as request}]
-          (reset! ns-holder response-ns)
-          (background/create-ns response-ns)
-          (go (>! tab-info {:ns response-ns}))
-          
-          (assoc request :eval-status "ok" :eval-result response-ns)
-        ) in) out) pass))
-
-
-(defn assoc-ns [in ns-holder]
-  (async/map< #(assoc % :ns @ns-holder) in))
+(defn ns-handler [in {:keys [tab-info]}]
+  (async/map< 
+    (fn [{:keys [response-ns] :as messge}]  
+      (async/put! tab-info {:ns response-ns}) messge) in))
 
 (defn setup-routing [{:keys [execute result] :as channels}]
   (-> execute
-      (assoc-ns tab-ns)
       (comp/compiler)
       (comp/divert-errors result)
-      (ns-handler result channels tab-ns)
+      (ns-handler channels)
       (eval/evaluator)  
       (async/pipe result)))
 
@@ -53,14 +37,13 @@
         
       (let [{:keys [url agentInfo]} info]
         (if agentInfo
-          (if (:is_cljs agentInfo)
-            (background/create-ns @tab-ns) 
+          (if-not (:is_cljs agentInfo)
             (background/inject-cljs))
           
           (if (settings/auto-inject? url)
             (background/inject-agent @devtools/tab-id)))
           
-        (async/put! tab-info {:url url :agent-info agentInfo :ns @tab-ns})))))
+        (async/put! tab-info {:url url :agent-info agentInfo})))))
 
 (defn consume-inject-requests [{:keys [inject-agent]}]
   (util/consume inject-agent 
@@ -70,13 +53,6 @@
       (when save-auto
         (settings/add-auto-inject! url)))))
 
-           
-(defn progress [delay chan]
-  (go
-    (>! chan true)
-    (<! (async/timeout delay))
-    (>! chan false)))
-
 (defn ^:export run []
   (when (and devtools/available? runtime/available?)
     (background/connect-and-listen @devtools/tab-id))
@@ -85,6 +61,4 @@
     (let [channels (ui/run-ui (.-body js/document))]
       (setup-routing channels)
       (make-tab-info-listener channels)
-      (consume-inject-requests channels)
-    )
-)
+      (consume-inject-requests channels)))

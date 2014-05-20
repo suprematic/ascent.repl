@@ -93,6 +93,35 @@ if(chrome.extension) { // we are content script
         sendOut({type: "tab-info", agentInfo: {is_cljs: is_cljs}});  
       };
 
+      var withPatchedGoog = function(fn) {
+        var orig_provide = goog.provide;
+        var orig_requre = goog.require;
+        var last_provided = null;
+
+        try {
+          goog.provide = function(ns) {
+            last_provided = ns;
+          };
+
+          goog.require = function(ns) {
+            if(last_provided) {
+              var to = goog.getObjectByName(last_provided);
+              var from  = goog.getObjectByName(ns);
+
+              for(prop in from)
+                if(!to[prop])
+                  to[prop] = from[prop];
+            }
+          };
+
+          fn();
+        }
+        finally{
+          goog.provide = orig_provide;
+          goog.require = orig_requre;
+        }
+      }
+
       var handlers = {};
       handlers["inject"] = function(request) {
         if(DEBUG)
@@ -166,7 +195,12 @@ if(chrome.extension) { // we are content script
           var result = null;
 
           try {
-            result = String(eval(statement));
+            if(!goog.isProvided_(request.ns))
+              goog.provide(request.ns);
+
+            withPatchedGoog(function() {
+              result = String(eval(statement));
+            });
           }catch(e) {
             result = {exception: true, message: e.constructor.name + ": " + e.message};
           }

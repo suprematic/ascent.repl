@@ -104,7 +104,7 @@
       
       (log "cannot find channel for id: " id)))))
 
-(defn eval [statement]
+(defn eval [statement ns]
   (let [id (str (gensym))
         ch (async/chan)]
        
@@ -114,8 +114,8 @@
         :type "eval"
         :id id
         :statement statement
-      }
-    )
+        :ns ns
+      })
   
     (go 
       (<! (async/timeout 1000))
@@ -134,9 +134,7 @@
       :destination "background"
       :type        "inject-agent"
       :tabId        tab-id  
-    }
-  )      
-)
+    }))
 
 
 

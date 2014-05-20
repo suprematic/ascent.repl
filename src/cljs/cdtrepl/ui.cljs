@@ -94,7 +94,7 @@
       :history-index nil
 
       :tab-info {
-        :ns nil                 
+        :ns "cljs.user"                 
         :url nil
         :agent-info nil
       }

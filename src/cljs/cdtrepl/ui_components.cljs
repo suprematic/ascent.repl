@@ -183,9 +183,9 @@
               :onKeyDown #(let [key (.-which %)] 
                               (case key
                                 13
-                                  (let [statement (.-value (om/get-node owner reference))]
+                                  (let [statement (.-value (om/get-node owner reference)) ns (get-in @state [:tab-info :ns])]
                                     (when-not (clojure.string/blank? statement)
-                                      (util/>channel owner :execute {:clj-statement statement})))
+                                      (util/>channel owner :execute {:clj-statement statement :ns ns})))
 
                                 38
                                  (util/>channel owner :history {:direction :backward})
@@ -233,4 +233,4 @@
       (dom/div nil
         (om/build toolbar (:tab-info state))
         (om/build log state)
-        (om/build input {})))))
+        (om/build input state)))))
