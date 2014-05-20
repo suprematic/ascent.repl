@@ -5,12 +5,10 @@
     (if (> size 0)
       (- size 1))))
 
-
 (defn append [history statement]
   (let [ix (last-index history)]
-    (when (or (nil? ix) (not= statement (nth history ix)))
-      (conj history statement))))
-
+    (if (or (nil? ix) (not= statement (nth history ix)))
+      (conj history statement) history)))
 
 (defn backward [history idx]
   (cond
