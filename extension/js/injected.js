@@ -237,6 +237,8 @@ if(chrome.extension) { // we are content script
         if(DEBUG)
           log("reload requested for ns: " + ns);
 
+          ns = ns.replace("-", "_");
+
           if(goog.isProvided_(ns)) {
             var path = goog.getPathFromDeps_(ns);
             if(path) {  
