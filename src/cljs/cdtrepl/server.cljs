@@ -1,11 +1,9 @@
-(ns cdtrepl.comp
+(ns ascent.agent.core
   (:require 
     [clojure.walk :as cw]
-    [khroma.devtools :as devtools]
-    [khroma.log :as log]
+    [ascent.log :as log]
     [cljs.core.async :as async]
-    [chord.client :as chord]
-  )
+    [chord.client :as chord])
 
   (:require-macros 
     [cljs.core.async.macros :refer [go alt! go-loop]]))
@@ -13,12 +11,14 @@
 (defn- response-text [request]
   (.-responseText request))
 
-
 (def out-channel 
   (async/chan))
 
 (def in-channel 
   (async/chan))
+
+(def in-pub 
+  (async/pub in-channel :type))
 
 (def connect
   (async/chan 1))
@@ -62,14 +62,15 @@
     (connect-attempt url)
     (recur)))
 
-(defn compiler [requests]
-  (async/pipe requests out-channel) in-channel)
+(defn- set-type [in type]
+  (async/map< #(assoc % :type type) in))
 
+(defn route-through [requests out-type in-type]
+  (let [ch (async/chan)]
+    (async/pipe (set-type requests out-type) out-channel) 
+    (async/sub in-pub in-type ch) ch))
 
-(defn divert-errors [in-ch err-ch]
-  (let [[err pass] 
-       (async/split 
-        #(= (:compile-status %) "error") in-ch)]
+(defn subscribe [in-type]
+  (let [ch (async/chan)]
+    (async/sub in-pub in-type ch) ch))
 
-       (async/pipe err err-ch)
-       pass))

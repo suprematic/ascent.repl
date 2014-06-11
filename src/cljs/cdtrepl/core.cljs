@@ -4,7 +4,7 @@
       [cdtrepl.ui :as ui]
       [cdtrepl.eval :as eval]
       [cdtrepl.background :as background]
-      [cdtrepl.comp :as comp]
+      [cdtrepl.server :as server]
       [cdtrepl.settings :as settings]
       [cdtrepl.util :as util]
       [khroma.devtools :as devtools]
@@ -22,10 +22,17 @@
     (fn [{:keys [response-ns] :as messge}]  
       (async/put! tab-info {:ns response-ns}) messge) in))
 
+(defn divert-errors [in-ch err-ch]
+  (let [[err pass] 
+    (async/split 
+      #(= (:compile-status %) "error") in-ch)]
+      (async/pipe err err-ch) pass))
+
 (defn setup-routing [{:keys [execute result] :as channels}]
   (-> execute
-      (comp/compiler)
-      (comp/divert-errors result)
+      (server/route-through "compile" "compile-result")
+      (divert-errors result)
+      
       (ns-handler channels)
       (eval/evaluator)  
       (async/pipe result)))
