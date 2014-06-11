@@ -5,7 +5,6 @@
     [khroma.log :as log]
     [khroma.util :as kutil]
     [khroma.extension :as extension]
-    [cdtrepl.comp :as comp]
     [cljs.core.async :as async])
 
   (:require-macros 
