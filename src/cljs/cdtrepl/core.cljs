@@ -35,7 +35,15 @@
       
       (ns-handler channels)
       (eval/evaluator)  
-      (async/pipe result)))
+      (async/pipe result))
+  
+  ;(util/consume
+  ;  (server/subscribe "ns-change")  
+  ;  (fn [message]
+  ;    (log/debug "ns-change" message)      
+  ;    (background/reload! (:ns message))))
+  
+)
 
 (defn make-tab-info-listener [{:keys [tab-info]}]
   (background/handler "tab-info"                      
