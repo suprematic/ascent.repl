@@ -1,7 +1,7 @@
 (ns ascent.agent.core
   (:require 
     [clojure.walk :as cw]
-    [ascent.log :as log]
+    [khroma.log :as log]
     [cljs.core.async :as async]
     [chord.client :as chord])
 
