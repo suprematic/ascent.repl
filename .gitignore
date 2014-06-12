@@ -3,3 +3,7 @@ demo/**
 extension/js/compiled/**
 target/**
 /extension.zip
+/.lein-repl-history
+/pom.xml
+*.pxm
+
