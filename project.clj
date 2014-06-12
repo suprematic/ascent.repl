@@ -18,6 +18,7 @@
     [jarohen/chord "0.3.1"]
     [alandipert/storage-atom "1.2.2"]
     [khroma "0.0.1"]
+    [ascent.agent "0.0.1-SNAPSHOT"]
     [om "0.6.2"]]
 
 

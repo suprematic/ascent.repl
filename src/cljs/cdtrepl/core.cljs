@@ -4,7 +4,7 @@
       [cdtrepl.ui :as ui]
       [cdtrepl.eval :as eval]
       [cdtrepl.background :as background]
-      [cdtrepl.server :as server]
+      [ascent.agent.core :as agent]
       [cdtrepl.settings :as settings]
       [cdtrepl.util :as util]
       [khroma.devtools :as devtools]
@@ -30,7 +30,7 @@
 
 (defn setup-routing [{:keys [execute result] :as channels}]
   (-> execute
-      (server/route-through "compile" "compile-result")
+      (agent/route-through "compile" "compile-result")
       (divert-errors result)
       
       (ns-handler channels)
@@ -72,6 +72,8 @@
   (when (and devtools/available? runtime/available?)
     (background/connect-and-listen @devtools/tab-id))
 
+  (agent/connect {:url "ws://localhost:9093/ws"})
+  
   (background/log "starting REPL ui")    
     (let [channels (ui/run-ui (.-body js/document))]
       (setup-routing channels)
