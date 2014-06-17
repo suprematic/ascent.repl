@@ -28,22 +28,32 @@
       #(= (:compile-status %) "error") in-ch)]
       (async/pipe err err-ch) pass))
 
+
+(defn- timeout [ch timeout]
+  (go
+    (first
+      (alts!
+        [ch (async/timeout timeout)]))))
+
+(defn compile [requests]
+  (let [out (async/chan) in (async/chan) agent-out (agent/route-through in "compile" "compile-result")]
+    (util/consume requests 
+      #(go
+        (>! in %)
+          (let [response (<! (timeout agent-out 2000))]
+            (>! out 
+              (or 
+                response
+                (merge % {:compile-status "error" :compile-message "Compiler timeout"})))))) out))
+
 (defn setup-routing [{:keys [execute result] :as channels}]
   (-> execute
-      (agent/route-through "compile" "compile-result")
+      (compile)
       (divert-errors result)
       
       (ns-handler channels)
       (eval/evaluator)  
-      (async/pipe result))
-  
-  ;(util/consume
-  ;  (server/subscribe "ns-change")  
-  ;  (fn [message]
-  ;    (log/debug "ns-change" message)      
-  ;    (background/reload! (:ns message))))
-  
-)
+      (async/pipe result)))
 
 (defn make-tab-info-listener [{:keys [tab-info]}]
   (background/handler "tab-info"                      
@@ -72,7 +82,7 @@
   (when (and devtools/available? runtime/available?)
     (background/connect-and-listen @devtools/tab-id))
 
-  (agent/connect {:url "ws://localhost:9093/ws"})
+  (agent/connect {:url (settings/service-url)})
   
   (background/log "starting REPL ui")    
     (let [channels (ui/run-ui (.-body js/document))]

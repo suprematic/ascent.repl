@@ -20,7 +20,8 @@
     :auto-inject @(:auto-inject model)
     :service-url @(:service-url model)})
 
-
+(defn service-url []
+  @(:service-url model))
 
 (defn auto-inject? [url]
   (let [auto-inject @(:auto-inject model)]
