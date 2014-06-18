@@ -26,6 +26,7 @@
                   :font-size "10pt !important"}
                 
                 :onChange util/no-op
+                :onClick #(.stopPropagation %)
                                            
                 :type "text" 
                 :value (:service-url state)})

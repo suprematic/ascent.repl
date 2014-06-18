@@ -155,13 +155,19 @@
       om/IWillMount
         (will-mount [_]
           (om/set-state! owner :kill 
-            (util/<channel owner :input 
-              #(set! (.-value (om/get-node owner reference)) (str %)))))
+            [                        
+              (util/<channel owner :input 
+                #(set! (.-value (om/get-node owner reference)) (str %)))
+
+              (util/<channel owner :focus
+                #(when-let [input (om/get-node owner reference)]
+                  (.focus input)))
+            ]))
       
       om/IWillUnmount
         (will-unmount [_]
-          (async/put! 
-            (om/get-state owner :kill) true))
+          (doseq [kill (om/get-state owner :kill)]                      
+            (async/put! kill true)))
       
       om/IRender
         (render [_]
@@ -245,7 +251,7 @@
   (reify
     om/IRender
     (render [_]
-      (dom/div {:onClick #(log/info "Click!!!")}
+      (dom/div nil
         (om/build toolbar (:tab-info state))
         (om/build log state)
         (om/build input state)))))

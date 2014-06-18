@@ -60,7 +60,12 @@
   (reify
     om/IRender
       (render [_]
-        (dom/div nil
+        (dom/div 
+          #js {:style #js {:height "100%"} 
+            :onClick 
+              #(async/put! 
+                (om/get-shared owner [:channels :focus]) true)}
+                 
           (om/build 
             (if (get-in state [:tab-info :agent-info]) ui-compnents/repl ui-compnents/no-agent) state)
           
@@ -88,6 +93,7 @@
   :tab-info     (async/chan 256)
   :inject-agent (async/chan 256)
   :clear        (async/chan 256)
+  :focus        (async/chan 256)
   :history      (async/chan 256)
   :settings     (async/chan 256)})
 
