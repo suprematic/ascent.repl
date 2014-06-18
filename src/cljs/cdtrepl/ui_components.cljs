@@ -206,8 +206,19 @@
 
 (defn no-agent [state owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IInitState
+    (init-state [_]
+      {:visible false})
+    
+    om/IWillMount
+    (will-mount [_]
+      (go
+        (<! (async/timeout (:no-agent-delay @state)))
+        (when (.isMounted owner)
+          (om/set-state! owner :visible true))))
+    
+    om/IRenderState
+    (render-state [_ {:keys [visible]}]
       (let [url (get-in state [:tab-info :url])]
         (dom/div #js {
            :style #js {
@@ -216,23 +227,25 @@
             :padding-left  "15px"
             :padding-top "5px"}}
       
-            (dom/p nil
-              "Loaded page does not contain required instrumentation code. Click here to "
-              (dom/a #js {:style #js {:font-weight "bold"} :href "#" 
-                :onClick #(util/>channel owner :inject-agent {:save-auto false})} "inject it once")
-              
-              ", or here to "
-              (dom/a #js {:style #js {:font-weight "bold"} :href "#"
-                :onClick #(util/>channel owner :inject-agent {:save-auto true :url url})} "automatically inject")
-              
-              " it every time for "
-              (dom/span #js {:style #js {:color "grey" :font-style "italic"}} url)))))))
+            (if visible
+              (dom/p nil
+                "Loaded page does not contain required instrumentation code. Click here to "
+                (dom/a #js {:style #js {:font-weight "bold"} :href "#" 
+                  :onClick #(util/>channel owner :inject-agent {:save-auto false})} "inject it once")
+                
+                ", or here to "
+                (dom/a #js {:style #js {:font-weight "bold"} :href "#"
+                  :onClick #(util/>channel owner :inject-agent {:save-auto true :url url})} "automatically inject")
+                
+                " it every time for "
+                (dom/span #js {:style #js {:color "grey" :font-style "italic"}} url)) 
+              (dom/p #js{:style #js {:color "grey"}} "Waiting...")))))))
 
 (defn repl [state owner]
   (reify
     om/IRender
     (render [_]
-      (dom/div nil
+      (dom/div {:onClick #(log/info "Click!!!")}
         (om/build toolbar (:tab-info state))
         (om/build log state)
         (om/build input state)))))

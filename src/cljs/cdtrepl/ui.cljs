@@ -108,6 +108,7 @@
       :progress false
       :settings-visible false
       :settings (settings/>state settings/model)
+      :no-agent-delay 1000
     })
 
 
