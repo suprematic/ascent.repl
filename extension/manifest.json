@@ -22,6 +22,6 @@
   ],
 
   "background": {
-    "scripts": ["js/background.js"]
+    "scripts": ["js/compiled/background.js"]
   }
 }
