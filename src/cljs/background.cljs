@@ -7,6 +7,9 @@
 	(:require-macros
 		[cljs.core.async.macros :refer [go go-loop]]))
 
+(defn boot []
+	(log/debug "Just for boot checking..."))
+
 (defn format [fmt & args]
   (apply gstring/format fmt args))
 

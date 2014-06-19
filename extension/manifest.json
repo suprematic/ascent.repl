@@ -22,6 +22,10 @@
   ],
 
   "background": {
-    "scripts": ["js/compiled/background.js"]
+    "scripts": [
+      "js/compiled/goog/base.js",
+      "js/compiled/cdtrepl.js",
+      "js/background-boot.js",
+      "js/compiled/background.js"]
   }
 }
