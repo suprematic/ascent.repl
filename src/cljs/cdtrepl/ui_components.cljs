@@ -249,9 +249,16 @@
 
 (defn repl [state owner]
   (reify
+    om/IDidUpdate
+      (did-update [this prev-props prev-state]
+        (when-let [div (om/get-node owner :input-and-log)]
+          (set! (.-scrollTop div) (.-scrollHeight div))))
+    
     om/IRender
     (render [_]
       (dom/div nil
         (om/build toolbar (:tab-info state))
-        (om/build log state)
-        (om/build input state)))))
+        
+        (dom/div #js {:ref :input-and-log :style #js {:position "absolute" :overflow "scroll" :top "25px" :bottom "0px" :right 0 :left 0}}
+          (om/build log state)
+          (om/build input state))))))
