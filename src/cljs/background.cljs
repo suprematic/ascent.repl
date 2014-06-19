@@ -84,6 +84,7 @@
 		(.addListener js/connection.onMessage local-on-message)
 		(.addListener js/connection.onDisconnect on-disconnect)))
 
+(defn init []
 (.addListener js/chrome.runtime.onConnect
 	(fn [connection]
 		(let [parts (s/split (:name connection) ":")]
@@ -135,4 +136,4 @@
 
 (.addListener js/chrome.tabs.onReplaced
 	(fn [added-tab-id removed-tab-id]
-		(remove-tab-info (str added-tab-id))))
+		(remove-tab-info (str added-tab-id)))))
