@@ -235,16 +235,13 @@
       
             (if visible
               (dom/p nil
-                "Loaded page does not contain required instrumentation code. Click here to "
+                "Click here to "
                 (dom/a #js {:style #js {:font-weight "bold"} :href "#" 
-                  :onClick #(util/>channel owner :inject-agent {:save-auto false})} "inject it once")
+                  :onClick #(util/>channel owner :inject-agent {:save-auto false})} "inject the agent code once")
                 
                 ", or here to "
                 (dom/a #js {:style #js {:font-weight "bold"} :href "#"
-                  :onClick #(util/>channel owner :inject-agent {:save-auto true :url url})} "automatically inject")
-                
-                " it every time for "
-                (dom/span #js {:style #js {:color "grey" :font-style "italic"}} url)) 
+                  :onClick #(util/>channel owner :inject-agent {:save-auto true :url url})} "automatically inject it every time for this url.")) 
               (dom/p #js{:style #js {:color "grey"}} "Waiting...")))))))
 
 (defn repl [state owner]

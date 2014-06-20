@@ -16,7 +16,7 @@
         (render [_]    
           (let [ref (name (gensym))]
             (dom/div #js {:style #js {:clear "both" :padding-left "5px" :padding-top "10px" :color "#888" :width "250px"}}
-              (dom/div nil "Service URL")
+              (dom/div nil "Service Endpoint URL")
               (dom/input #js {
                 :ref ref
                 :style #js {
