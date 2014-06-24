@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>cdtrepl.extension by suprematic</title>
+    <title>ascent.repl</title>
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
@@ -17,53 +17,165 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>cdtrepl.extension</h1>
-        <p>ClojureScript REPL for Chrome DevTools</p>
-        <p class="view"><a href="https://github.com/suprematic/cdtrepl.extension">View the Project on GitHub <small>suprematic/cdtrepl.extension</small></a></p>
+        <h1>Ascent REPL</h1>
+        <p>ClojureScript REPL for Google Chrome DevTools</p>
+        <p class="view">
+          <a href="https://github.com/suprematic/ascent.repl">
+            View the Project on GitHub <small>suprematic/ascent.repl</small>
+          </a>
+        </p>
         <ul>
-          <li><a href="https://github.com/suprematic/cdtrepl.extension/zipball/master">Download <strong>ZIP File</strong></a></li>
-          <li><a href="https://github.com/suprematic/cdtrepl.extension/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/suprematic/cdtrepl.extension">View On <strong>GitHub</strong></a></li>
+          <li><a href="https://chrome.google.com/webstore/detail/clojurescript-repl/lmjjlapjpjeodaadkljnmdfbjpfddchm">Install <strong>Extension</strong></a></li>
+
+
+          <li><a href="https://github.com/suprematic/ascent.repl">View On <strong>GitHub</strong></a></li>
         </ul>
       </header>
-      <section>
-        <h3>
-<a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+    
+    <section>
+      <h3>
+        <a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages">
+          <span class="octicon octicon-link"></span>
+        </a>About
+      </h3>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+      <p>
+        Ascent REPL is a Chrome extension that adds ClojureScript read-eval-print loop UI panel to Chrome Developer Tools (DevTools). It is a part of
+        a bigger project that is not released yet - stay tuned. :)
+      </p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
-</code></pre>
+      <p>
+        <img src="images/screenshot_1.png" class="shadow">
+      </p>
 
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
 
-<h3>
-<a name="designer-templates" class="anchor" href="#designer-templates"><span class="octicon octicon-link"></span></a>Designer Templates</h3>
+      <h3>Usage</h3>
+      <p>
+        After installing the extension you can immediately access it from DevTools. It will ask you if you want to inject small 
+        piece of JavaScript code into the page. This code comminicates will UI panel, evaluates compiled JS statements, creates and
+        updates namespaces.
+      </p>
 
-<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
+      <p>
+        <img src="images/screenshot_2.png" class="shadow">
+      </p>
 
-<h3>
-<a name="rather-drive-stick" class="anchor" href="#rather-drive-stick"><span class="octicon octicon-link"></span></a>Rather Drive Stick?</h3>
+      <p>
+        If the page does not containt <span class="highlight">cljs.core</span> namespace - it is still possible to inject the agent. In this case 
+        <span class="highlight">cljs.core</span> and it's dependencies will be also injected. You can use Ascent REPL to interact 
+        with any web page, not only implemented in ClojureScript.
+      </p>
 
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
+      <p>
+        You can switch namespace with <span class="highlight">(ns ...)</span> statement. If namespace does not exist it will be created and all functions from 
+        <span class="highlight">cljs.core</span> will be imported into it.
+      </p>
 
-<h3>
-<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
+      <p>
+        You can dynamically re-load namespace contents with the <img src="images/screenshot_4.png" style="position: relative; top: 3px;"> button. If you click on it, all existing content from 
+        the current namespace will be removed. After that, corresponding <span class="highlight">.js</span> 
+        file will be re-loaded. This feature is experimental - please let us know how it works for you.
+      </p>
 
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
+      <h3>Server</h3>
+      <p>
+        Ascent REPL uses server back-end which compiles ClojureScript to JavaScript. Currently it is publicly available at ws://.... . 
+      </p>
 
-<h3>
-<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+      <h3>Run your own server</h3>
 
-<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
+      <p>
+        Add the following plugin dependency to your <span class="highlight">project.clj</span> file.
+
+        <p>
+        <code>
+          <pre>:plugins [[ascent.server "0.2.0-SNAPSHOT"]]</pre>
+        </code>
+        </p>
+
+        and start it with the command:
+
+        <p>
+        <code>
+          <pre>$ lein ascent :port 9093</pre>
+        </code>
+        </p>
+
+        <p>
+          Go to the settings window and change Service Endpoint URL:
+        </p>
+
+        <p>
+          <img src="images/screenshot_3.png" class="shadow">
+        </p>
+
+        <p>
+          Please not that because Ascent REPL uses web sockets for communication, you should use <span class="highlight">ws://</span> schema. 
+          Also keep in mind that you will have to close and re-open DevTools to apply the change.
+        </p>
+      </p>
+
+      <h3>Implementation</h3>
+      <p>
+        Ascent REPL is implemented in <a href="https://github.com/clojure/clojurescript">ClojureScript</a> with very 
+        small fragments of pure JavaScript code. It heavilly uses <a href="https://github.com/clojure/core.async">core.async</a> 
+        for internal messaging. Visible parts are done with <a href="https://github.com/swannodette/om">om</a>. 
+        We also use <a href="https://github.com/james-henderson/chord">chord</a> for server communication.
+      </p>
+
+      <p>
+        Both <a href="https://github.com/suprematic/ascent.repl">client</a> 
+        and <a href="https://github.com/suprematic/ascent.server">server</a> parts are hosted on GitHub. Contributions are welcome.
+      </p>
+
+      <h3>Known Limitations</h3>
+
+      <p>
+        <ul>
+          <li>Because of Chrome security restrictions it is not possible to interact with pages loaded via https.</li>
+          <li>If your ClojureScript code has been compiled with optimizations, it will not be possible to interact with it.</li>
+        </ul>
+      </p>
+
+      <h3>History</h3>
+
+      <h4>1.6</h4>
+
+      <p>
+        <ul>
+          <li>Use Web Sockets for server communication</li>
+          <li>Ask user before injecting agent</li>
+          <li>Settings page</li>
+          <li>Switch to om for UI building</li>
+          <li>Various improvements and fixes</li>
+          <li>Namespace reloading (experimental)</li>
+        </ul>
+      </p>
+
+
+      <h3>Authors and Contributors</h3>
+
+      <p>
+        Created by Alexey Aristov of <a href="http://www.suprematic.net"><span class="suprematic">SUPREMATIC</span></a>. Several ideas are contributed 
+        by <a href="http://cloudgears.com/">Serge Vasilliev</a>. Special thanks to Andrew Kosyakov 
+
+        from <a href="https://developer.chrome.com/devtools/index">Google Chrome DevTools</a> team for his help and support.
+      </p>
+
+      <h3>Support or Contact</h3>
+
+      <p>If you have questions or need help - you can contact me at <a href="aav {no_spam} suprematic.net">aav {no_spam} suprematic.net</a>. 
+      <p>Updates and news will be pubslished on twitter under <a href="http://www.twitter.com/suprematic_aav">@suprematic_aav</a> - please follow</p>
+
       </section>
     </div>
+    
     <footer>
-      <p>Project maintained by <a href="https://github.com/suprematic">suprematic</a></p>
+      <p>Copyright 2013 <a href="https://github.com/suprematic">SUPREMATIC</a></p>
       <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
     </footer>
+
+
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
               <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");

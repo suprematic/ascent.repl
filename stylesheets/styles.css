@@ -232,6 +232,29 @@ img {
   max-width: 100%;
 }
 
+img.shadow {
+  -webkit-box-shadow: 1px 1px 5px 0px rgba(50, 50, 50, 0.77);
+  -moz-box-shadow:    1px 1px 5px 0px rgba(50, 50, 50, 0.77);
+  box-shadow:         1px 1px 5px 0px rgba(50, 50, 50, 0.77);
+  border-style: solid; 
+  border-width: 1px; 
+  border-color: #AAA;
+}
+
+
+
+span.highlight {
+  color: #069;
+  background-color: inherit;
+}
+
+span.suprematic {
+  color: #bc0000; 
+}
+
+
+
+
 code, pre {
   font-family: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal;
   color: #333;
