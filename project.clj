@@ -1,4 +1,4 @@
-(defproject cdtrepl.extension "0.1.0-SNAPSHOT"
+(defproject ascent/repl "0.1.0-SNAPSHOT"
   :description    "ClojureScript REPL for Chrome DevTools"
   :license {
       :name "Eclipse Public License"
