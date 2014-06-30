@@ -6,7 +6,7 @@
   }
   
   :plugins [
-     [lein-cljsbuild "1.0.1"]
+     [lein-cljsbuild "1.0.3"]
   ]
 
   :hooks  [leiningen.cljsbuild]
