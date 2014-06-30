@@ -13,7 +13,7 @@
 
   :dependencies [
   	[org.clojure/clojure "1.5.1"]
-  	[org.clojure/clojurescript "0.0-2173"]
+  	[org.clojure/clojurescript "0.0-2234"]
     [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
     [jarohen/chord "0.3.1"]
     [alandipert/storage-atom "1.2.2"]
