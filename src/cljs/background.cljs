@@ -38,7 +38,7 @@
 	(get-port "background" destination))
 
 (defn set-tab-info! [tab-id info]
-  (swap! tab-infos assoc (str tab-id) info))
+	(swap! tab-infos assoc (str tab-id) info))
 
 (defn get-tab-info [tab-id]
   (@tab-infos (str tab-id)))
@@ -139,7 +139,7 @@
 	  	(when-let [{:keys [tabId changeInfo tab]} (<! ch)]
 				(when (= "complete" (:status changeInfo))
 					(let [tab-info (get-tab-info tabId)]
-	  				(log/info "tab load complete" tabId)
+	  				(log/info "tab load complete" tabId ":" tab-info)
 						(set-tab-info! tabId {:agentInfo nil :url (:url tab)})
 
 						(when-let  [port-fn (get-port "repl" tabId)]
