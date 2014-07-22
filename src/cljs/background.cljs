@@ -11,6 +11,11 @@
 	(:require-macros
 		[cljs.core.async.macros :refer [go go-loop]]))
 
+(def ^:const dst-log "log")
+(def ^:const dst-inject-agent "inject-agent")
+(def ^:const dst-tab-info "tab-info")
+(def ^:const dst-background "background")
+
 (def debug
 	(atom true))
 
@@ -22,110 +27,111 @@
 
 (defn set-port! [destination tab-id port]
 	(let [path [(str destination) (str tab-id)]]
-  	(swap! connections
-    	#(assoc-in % path port))))
+		(swap! connections #(assoc-in % path port))))
 
 (defn get-port [destination tab-id]
- 	(get-in @connections [(str destination) (str tab-id)]))
+	(get-in @connections [(str destination) (str tab-id)]))
 
 (defn remove-port! [destination tab-id]
-  (swap! connections
-    #(update-in % [(str destination)] dissoc (str tab-id))))
-  
+	(swap! connections #(update-in % [(str destination)] dissoc (str tab-id))))
+
 (defn set-local-port! [destination handler]
-	(set-port! "background" destination handler))
+	(set-port! dst-background destination handler))
 
 (defn get-local-port [destination]
-	(get-port "background" destination))
+	(get-port dst-background destination))
 
 (defn set-tab-info! [tab-id info]
 	(swap! tab-infos assoc (str tab-id) info))
 
 (defn get-tab-info [tab-id]
-  (@tab-infos (str tab-id)))
+	(@tab-infos (str tab-id)))
 
 (defn remove-tab-info! [tab-id]
-  (swap! tab-infos dissoc (str tab-id)))
+	(swap! tab-infos dissoc (str tab-id)))
 
 (defn connect [port source tabId]
-	(set-port! source tabId 
-    (fn [message] 
-      (log/debug "sending message to %s:%s" source tabId message)
-      (async/put! port message)))
- 
- 	(go-loop []
-  	(if-let [message (<! port)]
-     	(let [message (walk/keywordize-keys message) {:keys [type destination]} message background? (= destination "background")]
-        (log/debug "received message: " message " background: " background?)
-    		(if-let [port-fn (if background?
-	                     	   (get-local-port type)
-	                       	 (get-port destination tabId))]
-          (do       
-	        	(when (and @debug (not= type "log"))
-	          	(log/debug "message %s:%s -> %s:%s" source tabId destination (if-not background? tabId "*")) message)
-	        
-		      	(port-fn
-		        	(assoc message :source source :sourceTabId tabId)))
-          
-          (log/debug "message %s:%s -> /dev/null" source tabId))
-      	(recur))
-      
-     	(remove-port! source tabId))))
+	(set-port! source tabId
+		(fn [message]
+			(log/debug "sending message to %s:%s" source tabId message)
+
+			(async/put! port message)))
+
+	(go-loop []
+		(if-let [message (<! port)]
+			(let [message (walk/keywordize-keys message) {:keys [type destination]} message background? (= destination "background")]
+				(log/debug "received message: " message " background: " background?)
+
+				(if-let [port-fn
+					(if background?
+						(get-local-port type)
+						(get-port destination tabId))]
+
+					(do
+						(when (and @debug (not= type "log"))
+							(log/debug "message %s:%s -> %s:%s" source tabId destination (if-not background? tabId "*")) message)
+						(port-fn (assoc message :source source :sourceTabId tabId)))
+
+					(log/debug "message %s:%s -> /dev/null" source tabId))
+				(recur))
+
+			(remove-port! source tabId))))
 
 (defn init []
 	(log/debug "Just for boot checking...")
 
- 	(let [ch (runtime/connections)]
-  	(go-loop []
-    	(when-let [connection (<! ch)]
-       	(let [connection-name (runtime/port-name connection) parts (s/split connection-name ":")]
+	(let [ch (runtime/connections)]
+		(go-loop []
+			(when-let [connection (<! ch)]
+				(let [connection-name (runtime/port-name connection) parts (s/split connection-name ":")]
 					(when (= 2 (count parts))
-       			(let [destination (first parts) tabId (second parts)]
+						(let [destination (first parts) tabId (second parts)]
 							(when @debug
-	        			(log/debug (str "incoming connection from " connection-name)))
-	      
+								(log/debug (str "incoming connection from " connection-name)))
+
 							(connect connection destination tabId)
-	      
+
 							(when-let [tab-info (get-tab-info tabId)]
 								(async/put! connection {:type "tab-info" :info tab-info})))))
+				(recur))))
 
-        (recur))))
+	(set-local-port! dst-log
+		(fn [{:keys [text]} message]
+			(when @debug
+				(log/debug "*** %s" text))))
 
-	(set-local-port! "log"
-		(fn [message]
-			(if @debug (log/debug "*** " (:text message)))))
-
-	(set-local-port! "inject-agent"
+	(set-local-port! dst-inject-agent
 		(fn [{:keys [tabId]} message]
-			(if @debug 
-     		(log/debug "agent injection requested for: " tabId))
-   
-			(.executeScript js/chrome.tabs tabId (clj->js {:file "js/injected.js"})
-				(fn [result]
-					(when @debug 
-       			(log/debug "connecting to tab:%s" tabId))
-     
-     			(let [port (runtime/channel-from-port 
-                     	  (.connect js/chrome.tabs tabId  (clj->js {:name (str "background:" tabId)})))]
-          
-          	(connect port "tab" tabId))))))
+			(when @debug
+				(log/debug "agent injection requested for: %s" tabId))
 
-	(set-local-port! "tab-info"
+			(let [inject-details (clj->js {:file "js/injected.js"})]
+				(.executeScript js/chrome.tabs tabId inject-details
+					(fn [result]
+						(when @debug
+							(log/debug "connecting to tab: %s" tabId))
+
+						(let [connect-info (clj->js {:name (str "background:" tabId)})]
+							(let [port (runtime/channel-from-port (.connect js/chrome.tabs tabId connect-info))]
+								(connect port "tab" tabId))))))))
+
+	(set-local-port! dst-tab-info
 		(fn [{:keys [agentInfo source sourceTabId] :as message}]
-			(when @debug 
-     		(log/debug "background page received tab-info: " message))
-   
-			(if (= "tab" source)
+			(when @debug
+				(log/debug "background page received tab-info: " message))
+
+			(when (= "tab" source)
 				(if-let [tab-info (get-tab-info sourceTabId)]
 					(if-let [port-fn (get-port "repl" sourceTabId)]
 						(let [out {:type "tab-info" :info (assoc tab-info :agentInfo agentInfo)}]
-   						(when @debug
-								(log/debug "sending tab-info to repl:" sourceTabId out))
-							(port-fn out))
-						(log/warn "cannot find port repl:%s" sourceTabId))
-					(log/warn "no tab-info found for tab-info message: " message)))))
 
- 
+							(when @debug
+								(log/debug "sending tab-info to repl:" sourceTabId out))
+
+							(port-fn out))
+						(log/warn "cannot find port repl: %s" sourceTabId))
+					(log/warn "no tab-info found for tab-info message: %s" message)))))
+
 	(let [ch (tabs/tab-updated-events)]
 		(go-loop []
 			(when-let [{:keys [tabId changeInfo tab]} (<! ch)]
