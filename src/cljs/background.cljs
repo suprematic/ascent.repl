@@ -6,8 +6,7 @@
 		[khroma.tabs :as tabs]
 		[khroma.runtime :as runtime]
 
-		[goog.string :as gstring]
-		[clojure.string :as s])
+		[clojure.string :as cstring])
 	(:require-macros
 		[cljs.core.async.macros :refer [go go-loop]]))
 
@@ -53,14 +52,14 @@
 (defn connect [port source tabId]
 	(set-port! source tabId
 		(fn [message]
-			(log/debug "sending message to %s:%s" source tabId message)
+			(log/debug "sending message to %s:%s:%s" source tabId message)
 
 			(async/put! port message)))
 
 	(go-loop []
 		(if-let [message (<! port)]
-			(let [message (walk/keywordize-keys message) {:keys [type destination]} message background? (= destination "background")]
-				(log/debug "received message: " message " background: " background?)
+			(let [message (walk/keywordize-keys message) {:keys [type destination]} message background? (= destination dst-background)]
+				(log/debug "received message: %s;" " background: %s" message background?)
 
 				(if-let [port-fn
 					(if background?
@@ -83,7 +82,7 @@
 	(let [ch (runtime/connections)]
 		(go-loop []
 			(when-let [connection (<! ch)]
-				(let [connection-name (runtime/port-name connection) parts (s/split connection-name ":")]
+				(let [connection-name (runtime/port-name connection) parts (cstring/split connection-name ":")]
 					(when (= 2 (count parts))
 						(let [destination (first parts) tabId (second parts)]
 							(when @debug
