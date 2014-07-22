@@ -1,8 +1,9 @@
 (ns background
 	(:require
 		[cljs.core.async :as async]
-  	[clojure.walk :as walk]
+		[clojure.walk :as walk]
 		[khroma.log :as log]
+		[khroma.tabs :as tabs]
 		[khroma.runtime :as runtime]
 
 		[goog.string :as gstring]
@@ -71,15 +72,6 @@
       
      	(remove-port! source tabId))))
 
-
-; move to khroma
-(defn tab-updated-events []
-  (let [ch (async/chan)]
-    (.addListener js/chrome.tabs.onUpdated
-      (fn [id info tab]
-        (async/put! ch (walk/keywordize-keys (js->clj {:tabId id :changeInfo info :tab tab}))))) ch))
-
-
 (defn init []
 	(log/debug "Just for boot checking...")
 
@@ -134,33 +126,31 @@
 					(log/warn "no tab-info found for tab-info message: " message)))))
 
  
-	(let [ch (tab-updated-events)]
+	(let [ch (tabs/tab-updated-events)]
 		(go-loop []
-	  	(when-let [{:keys [tabId changeInfo tab]} (<! ch)]
+			(when-let [{:keys [tabId changeInfo tab]} (<! ch)]
 				(when (= "complete" (:status changeInfo))
-					(let [tab-info (get-tab-info tabId)]
-	  				(log/info "tab load complete" tabId ":" tab-info)
-						(set-tab-info! tabId {:agentInfo nil :url (:url tab)})
+					(when @debug
+						(log/debug "tab updated: %s" (:url tab)))
 
-						(when-let  [port-fn (get-port "repl" tabId)]
+					(set-tab-info! tabId {:agentInfo nil :url (:url tab)})
+
+					(when-let [port-fn (get-port "repl" tabId)]
+						(let [tab-info (get-tab-info tabId)]
 							(when @debug
-	      				(log/debug  "to repl:%s" tabId tab-info))
-	    
+								(log/debug "to repl: %s" tabId tab-info))
+
 							(port-fn {:type "tab-info" :info tab-info}))))
-	      
-	    	(recur))))
- 
-	(.addListener js/chrome.tabs.onRemoved
-		(fn [tab-id remove-info]
-			(remove-tab-info! tab-id)))
+				(recur))))
 
-	(.addListener js/chrome.tabs.onReplaced
-		(fn [added-tab-id removed-tab-id]
-			(remove-tab-info! added-tab-id))))
+	(let [ch (tabs/tab-removed-events)]
+		(go-loop []
+			(when-let [{:keys [tabId removeInfo]} (<! ch)]
+				(remove-tab-info! tabId)
+				(recur))))
 
-
-
-
-
-
-
+	(let [ch (tabs/tab-replaced-events)]
+		(go-loop []
+			(when-let [{:keys [added removed]} (<! ch)]
+				(remove-tab-info! removed)
+				(recur)))))
