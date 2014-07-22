@@ -151,11 +151,24 @@
 	(let [ch (tabs/tab-removed-events)]
 		(go-loop []
 			(when-let [{:keys [tabId removeInfo]} (<! ch)]
+				(when @debug
+					(log/debug "tab removed: %s" tabId))
+
 				(remove-tab-info! tabId)
 				(recur))))
 
 	(let [ch (tabs/tab-replaced-events)]
 		(go-loop []
 			(when-let [{:keys [added removed]} (<! ch)]
+				(when @debug
+					(log/debug "tab replaced: %s to %s" removed added))
+
 				(remove-tab-info! removed)
+
+				(let [ch (tabs/get-tab added)]
+					(go-loop []
+						(when-let [{:keys [tab]} (<! ch)]
+							(set-tab-info! added {:agentInfo nil :url (:url tab)})
+							(recur))))
+
 				(recur)))))
