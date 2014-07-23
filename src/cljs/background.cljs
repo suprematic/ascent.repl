@@ -153,9 +153,8 @@
 				(remove-tab-info! removed)
 
 				(let [ch (tabs/get-tab added)]
-					(go-loop []
-						(when-let [{:keys [tab]} (<! ch)]
-							(set-tab-info! added {:agentInfo nil :url (:url tab)})
-							(recur))))
+					(async/take! ch
+						(fn [{:keys [tab]} ch]
+							(set-tab-info! added {:agentInfo nil :url (:url tab)}))))
 
 				(recur)))))
