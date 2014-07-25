@@ -68,6 +68,7 @@
           ["js/compiled/goog/base.js"                ["goog"]                                        []]
           ["js/compiled/goog/string/string.js"       ["goog.string" "goog.string.Unicode"]           []]
           ["js/compiled/goog/debug/error.js"         ["goog.debug.Error"]                            []]
+          ["js/compiled/goog/dom/nodetype.js"        ["goog.dom.NodeType"]                           []]
           ["js/compiled/goog/asserts/asserts.js"     ["goog.asserts" "goog.asserts.AssertionError"]  ["goog.debug.Error" "goog.string"]]
           ["js/compiled/goog/array/array.js"         ["goog.array" "goog.array.ArrayLike"]           ["goog.asserts"]]
           ["js/compiled/goog/object/object.js"       ["goog.object"]                                 []]
