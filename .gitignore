@@ -6,5 +6,5 @@ target/**
 /.lein-repl-history
 /pom.xml
 *.pxm
-
+*.iml
 /.lein-plugins/
